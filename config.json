@@ -1,31 +1,48 @@
 {
   "embed": {
-    "title": "🎫 ศูนย์บริการติดต่อทีมงาน / Support Tickets",
-    "description": "หากคุณมีปัญหา ต้องการสอบถาม หรือติดต่อทีมงาน กรุณากดเลือกหัวข้อด้านล่างเพื่อเปิดตั๋วติดต่อ (Ticket) ระบบจะสร้างห้องแชทส่วนตัวให้ทันที",
-    "color": "#5865F2",
-    "footer": "ระบบบริการช่วยเหลืออัตโนมัติ 24 ชม."
+    "title": "💎 𝗖𝗢𝗢𝗞𝗜𝗘𝗥𝗨𝗡𝗫 — 𝗦𝗨𝗣𝗣𝗢𝗥𝗧 & 𝗛𝗘𝗟𝗣 𝗖𝗘𝗡𝗧𝗘𝗥",
+    "description": "ยินดีต้อนรับสู่ศูนย์บริการลูกค้าระดับพรีเมียม **CookieRunX**\nหากคุณต้องการความช่วยเหลือ สอบถามข้อมูล หรือแจ้งปัญหาเกี่ยวกับการบริการ\nกรุณาเลือกประเภทการติดต่อจากเมนูด้านล่าง ทีมงานพร้อมดูแลคุณอย่างรวดเร็วที่สุด ✨\n\n```fix\n⚡ เปิดให้บริการรวดเร็ว • ข้อมูลเป็นความลับ 100% • บันทึกประวัติการบริการ\n```",
+    "color": "#D4AF37",
+    "banner_image": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop",
+    "thumbnail": "https://cdn-icons-png.flaticon.com/512/9422/9422891.png",
+    "footer": "CookieRunX Official Customer Support • บริการด้วยใจตลอด 24 ชั่วโมง",
+    "rules_field": {
+      "name": "📌 กฎและข้อตกลงในการเปิด Ticket",
+      "value": "> 𝟭. กรุณาระบุรายละเอียดให้ชัดเจน พร้อมแนบรูปภาพ/หลักฐาน (ถ้ามี)\n> 𝟮. ห้ามสแปมข้อความหรือแท็กทีมงานซ้ำๆ เพื่อความรวดเร็วในการให้บริการ\n> 𝟯. ห้อง Ticket จะถูกบันทึกประวัติ (Transcript) อัตโนมัติเมื่อปิดการสนทนา"
+    }
   },
   "categories": [
     {
       "id": "general",
-      "label": "สอบถามทั่วไป (General Inquiry)",
+      "label": "สอบถามทั่วไป & รายละเอียดบริการ",
       "emoji": "💬",
-      "description": "สอบถามข้อมูลทั่วไป ข้อสงสัย หรือการใช้งาน",
-      "prefix": "general"
+      "description": "General Inquiries & Information",
+      "prefix": "general",
+      "color": "#3498DB"
     },
     {
       "id": "support",
-      "label": "แจ้งปัญหาการใช้งาน (Technical Support)",
+      "label": "แจ้งปัญหาการใช้งาน & แจ้งบั๊ก",
       "emoji": "🛠️",
-      "description": "แจ้งปัญหา บั๊ก หรือข้อผิดพลาดต่างๆ",
-      "prefix": "support"
+      "description": "Technical Issues & Bug Reports",
+      "prefix": "support",
+      "color": "#E67E22"
     },
     {
       "id": "billing",
-      "label": "ติดต่อเรื่องสั่งซื้อ / ชำระเงิน (Billing & Shop)",
+      "label": "สั่งซื้อสินค้า / ชำระเงิน / เติมเงิน",
       "emoji": "💳",
-      "description": "สอบถามเรื่องชำระเงิน สินค้า หรือบริการ",
-      "prefix": "billing"
+      "description": "Shop, Payment & Top-up Services",
+      "prefix": "billing",
+      "color": "#2ECC71"
+    },
+    {
+      "id": "vip",
+      "label": "บริการพิเศษ VIP & ธุรกิจ",
+      "emoji": "👑",
+      "description": "VIP Support & Business Partnership",
+      "prefix": "vip",
+      "color": "#F1C40F"
     }
   ]
 }
