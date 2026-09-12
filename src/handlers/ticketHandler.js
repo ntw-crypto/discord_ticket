@@ -124,6 +124,11 @@ async function handleInteraction(interaction) {
 
         const actionRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
+            .setCustomId('ticket_btn_claim')
+            .setLabel('รับเรื่อง (Claim)')
+            .setEmoji('🙋‍♂️')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
             .setCustomId('ticket_btn_close')
             .setLabel('ปิด Ticket')
             .setEmoji('🔒')
@@ -151,6 +156,52 @@ async function handleInteraction(interaction) {
           content: '❌ เกิดข้อผิดพลาดในการสร้างห้อง Ticket'
         });
       }
+    }
+
+    // ปุ่มกดรับเคส (Claim Ticket)
+    if (customId === 'ticket_btn_claim') {
+      const staffRoleId = process.env.STAFF_ROLE_ID;
+      const member = interaction.member;
+
+      // ตรวจสอบว่าเป็นแอดมินหรือมียศทีมงานหรือไม่
+      const isStaff = member.permissions.has(PermissionFlagsBits.Administrator) ||
+        (staffRoleId && member.roles.cache.has(staffRoleId));
+
+      if (!isStaff) {
+        return interaction.reply({
+          content: '❌ เฉพาะแอดมินหรือทีมงานเท่านั้นที่สามารถกดรับเรื่องได้ครับ',
+          ephemeral: true
+        });
+      }
+
+      // ปิดการใช้งานปุ่ม Claim เพื่อไม่ให้กดซ้ำ
+      const updatedRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket_btn_claimed')
+          .setLabel(`ดูแลโดย ${user.username}`)
+          .setEmoji('✅')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId('ticket_btn_close')
+          .setLabel('ปิด Ticket')
+          .setEmoji('🔒')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId('ticket_btn_transcript')
+          .setLabel('บันทึกประวัติ')
+          .setEmoji('📜')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      const claimEmbed = new EmbedBuilder()
+        .setTitle('🙋‍♂️ มีเจ้าหน้าที่รับเรื่องดูแลแล้ว')
+        .setDescription(`เคสนี้กำลังได้รับการดูแลโดยเจ้าหน้าที่ <@${user.id}> (\`${user.tag}\`) เรียบร้อยแล้วครับ ✨`)
+        .setColor('#2ECC71')
+        .setTimestamp();
+
+      await interaction.update({ components: [updatedRow] });
+      return interaction.channel.send({ embeds: [claimEmbed] });
     }
 
     // ปุ่มกดปิด Ticket
