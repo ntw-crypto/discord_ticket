@@ -74,6 +74,15 @@ const commands = [
       option.setName('keys')
         .setDescription('ใส่ Key ที่ต้องการเติม (คั่นด้วยจุลภาคหรือเว้นวรรค เช่น KEY1, KEY2)')
         .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('import-keys')
+    .setDescription('อัปโหลดไฟล์ .txt เพื่อนำเข้า License Key จำนวนมากเข้าคลัง (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addAttachmentOption(option =>
+      option.setName('file')
+        .setDescription('แนบไฟล์ .txt ที่มี Key (1 บรรทัดต่อ 1 คีย์)')
+        .setRequired(true)
     )
 ].map(command => command.toJSON());
 

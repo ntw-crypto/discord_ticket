@@ -211,6 +211,51 @@ async function handleInteraction(interaction) {
         ephemeral: true
       });
     }
+
+    // คำสั่ง /import-keys สำหรับแอดมินอัปโหลดไฟล์ .txt
+    if (commandName === 'import-keys') {
+      const file = interaction.options.getAttachment('file');
+
+      if (!file || (!file.name.endsWith('.txt') && !file.contentType?.includes('text'))) {
+        return interaction.reply({
+          content: '❌ กรุณาแนบไฟล์นามสกุล `.txt` เท่านั้นครับ',
+          ephemeral: true
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        const response = await fetch(file.url);
+        if (!response.ok) throw new Error('ไม่สามารถดาวน์โหลดไฟล์ได้');
+
+        const textContent = await response.text();
+        const extractedKeys = textContent
+          .split(/[\r\n]+/)
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && !line.startsWith('#'));
+
+        if (extractedKeys.length === 0) {
+          return interaction.editReply({
+            content: '⚠️ ไฟล์ที่แนบมาไม่มี Key หรือข้อความว่างเปล่าครับ'
+          });
+        }
+
+        const totalRemaining = addKeysToPool(extractedKeys);
+
+        return interaction.editReply({
+          content: `🎉 **นำเข้า Key สำเร็จเรียบร้อย!**\n` +
+            `> 📥 **นำเข้าจากไฟล์**: \`${file.name}\`\n` +
+            `> 🔑 **จำนวน Key ที่เพิ่มเข้าคลัง**: **${extractedKeys.length}** คีย์\n` +
+            `> 📦 **ยอดคงเหลือในคลังแจกฟรีทั้งหมด**: **${totalRemaining}** คีย์`
+        });
+      } catch (err) {
+        console.error('Error importing keys from file:', err);
+        return interaction.editReply({
+          content: '❌ เกิดข้อผิดพลาดในการอ่านไฟล์ Key กรุณาลองใหม่อีกครั้ง'
+        });
+      }
+    }
   }
 
   // 2. จัดการเมื่อกดปุ่ม (Buttons)
