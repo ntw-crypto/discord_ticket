@@ -54,19 +54,12 @@ async function handleInteraction(interaction) {
     if (customId === 'ticket_btn_create') {
       await interaction.deferReply({ ephemeral: true });
 
-      const safeUsername = (user.username || 'user').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 15) || 'user';
-      
-      // เช็คว่ามีห้องค้างอยู่ไหม
-      const existingChannel = guild.channels.cache.find(c =>
-        c.name.includes(`ticket-${safeUsername}`) &&
-        c.type === ChannelType.GuildText
+      // นับจำนวน Ticket เพื่อรันเลขคิว 0001, 0002, ...
+      const ticketChannels = guild.channels.cache.filter(c => 
+        c.type === ChannelType.GuildText && (c.name.includes('ticket-') || c.name.includes('ticket'))
       );
-
-      if (existingChannel) {
-        return interaction.editReply({
-          content: `⚠️ คุณมีห้อง Ticket เปิดอยู่แล้วที่: <#${existingChannel.id}>`
-        });
-      }
+      const ticketNumber = String(ticketChannels.size + 1).padStart(4, '0');
+      const channelName = `🎫・ticket-${ticketNumber}`;
 
       try {
         const staffRoleId = process.env.STAFF_ROLE_ID;
@@ -113,8 +106,6 @@ async function handleInteraction(interaction) {
             parentCategoryId = null;
           }
         }
-
-        const channelName = `ticket-${safeUsername}-${Date.now().toString().slice(-4)}`;
 
         const ticketChannel = await guild.channels.create({
           name: channelName,
