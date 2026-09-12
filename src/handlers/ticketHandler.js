@@ -11,6 +11,7 @@ const {
 } = require('discord.js');
 const discordTranscripts = require('discord-html-transcripts');
 const config = require('../../config.json');
+const { claimTrialKey, addKeysToPool, getTrialKeysPool } = require('../services/trialService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -155,11 +156,71 @@ async function handleInteraction(interaction) {
         ephemeral: true
       });
     }
+
+    // คำสั่ง /setup-trial ส่งการ์ดปุ่มแจก Key ทดลองใช้ฟรี
+    if (commandName === 'setup-trial') {
+      const trialEmbed = new EmbedBuilder()
+        .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี!')
+        .setDescription(
+          `สัมผัสประสบการณ์ฟาร์มอัตโนมัติ ปล่อยบอทเล่นให้ 24 ชม.\n` +
+          `> ✨ **สิทธิ์การใช้งาน**: ทดลองใช้ฟรี 2 ชั่วโมงเต็ม\n` +
+          `> ⚡ **เงื่อนไข**: จำกัด 1 สิทธิ์ ต่อ 1 บัญชี Discord เท่านั้น\n` +
+          `> 🛡️ **ความปลอดภัย**: ปลอดภัย ไม่โดนแบน (Safe & Undetected)\n\n` +
+          `กดปุ่ม **"🎁 รับ Key ทดลองใช้ฟรี"** ด้านล่างเพื่อรับคีย์ทันที!`
+        )
+        .setColor('#D4AF37')
+        .setFooter({ text: 'CookieRunX Auto-Bot Trial System' })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('btn_claim_trial')
+          .setLabel('รับ Key ทดลองใช้ฟรี')
+          .setEmoji('🎁')
+          .setStyle(ButtonStyle.Success)
+      );
+
+      await interaction.channel.send({
+        embeds: [trialEmbed],
+        components: [row]
+      });
+
+      return interaction.reply({
+        content: '✅ ส่งการ์ดแจก Key ทดลองใช้ฟรีเรียบร้อยแล้ว!',
+        ephemeral: true
+      });
+    }
+
+    // คำสั่ง /trial สำหรับกดรับทางคำสั่ง
+    if (commandName === 'trial') {
+      return handleTrialClaim(interaction);
+    }
+
+    // คำสั่ง /add-trial-keys สำหรับแอดมินเติมคีย์เข้าคลัง
+    if (commandName === 'add-trial-keys') {
+      const keysInput = interaction.options.getString('keys');
+      const keys = keysInput.split(/[\s,]+/).map(k => k.trim()).filter(k => k.length > 0);
+
+      if (keys.length === 0) {
+        return interaction.reply({ content: '❌ กรุณาระบุ Key อย่างน้อย 1 คีย์ครับ', ephemeral: true });
+      }
+
+      const totalRemaining = addKeysToPool(keys);
+      return interaction.reply({
+        content: `✅ เติม Key ทดลองใช้เข้าสู่คลังสำเร็จแล้ว **${keys.length}** คีย์ (คลังปัจจุบันมีทั้งหมด: **${totalRemaining}** คีย์)`,
+        ephemeral: true
+      });
+    }
   }
 
   // 2. จัดการเมื่อกดปุ่ม (Buttons)
   if (interaction.isButton()) {
     const { customId, channel, user, guild } = interaction;
+
+    // ปุ่มกดรับ Key ทดลองใช้ฟรี (Button Trial Claim)
+    if (customId === 'btn_claim_trial') {
+      return handleTrialClaim(interaction);
+    }
 
     // ปุ่มกดรับยศอัตโนมัติ (ห้ามถอดยศเอง)
     if (customId.startsWith('btn_role_')) {
@@ -471,4 +532,53 @@ async function askCloseConfirmation(interaction) {
   });
 }
 
+// ฟังก์ชันประมวลผลการขอรับ Key ทดลองใช้ฟรี
+async function handleTrialClaim(interaction) {
+  const user = interaction.user;
+  const result = claimTrialKey(user.id, user.tag || user.username);
+
+  // กรณีเคยรับไปแล้ว
+  if (result.alreadyClaimed) {
+    const claimedDate = new Date(result.claimedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+    const alreadyEmbed = new EmbedBuilder()
+      .setTitle('⚠️ คุณเคยใช้สิทธิ์ทดลองใช้ฟรีไปแล้ว')
+      .setDescription(
+        `ระบบจำกัดสิทธิ์ **1 บัญชี Discord ต่อ 1 ครั้ง** เท่านั้นครับ\n\n` +
+        `> 🔑 **Key ที่คุณเคยได้รับ**: \`${result.key}\`\n` +
+        `> ⏰ **วันที่กดรับสิทธิ์**: ${claimedDate}\n\n` +
+        `💡 *หากต้องการใช้งานต่ออย่างต่อเนื่อง สามารถเปิด Ticket เพื่อสั่งซื้อแพ็กเกจเต็มได้เลยครับ!*`
+      )
+      .setColor('#E74C3C')
+      .setFooter({ text: 'CookieRunX Anti-Abuse Protection' });
+
+    return interaction.reply({
+      embeds: [alreadyEmbed],
+      ephemeral: true
+    });
+  }
+
+  // กรณีรับสิทธิ์สำเร็จ
+  const successEmbed = new EmbedBuilder()
+    .setTitle('🎉 ยินดีด้วย! คุณได้รับ Key ทดลองใช้ฟรี 2 ชั่วโมง')
+    .setDescription(
+      `ขอขอบคุณที่สนใจโปรแกรมบอทช่วยฟาร์ม **CookieRunX** ✨\n\n` +
+      `🔑 **License Key ของคุณ:**\n` +
+      `\`\`\`fix\n${result.key}\n\`\`\`\n` +
+      `📌 **วิธีเริ่มใช้งาน:**\n` +
+      `1. เปิดโปรแกรมบอท **CookieRunX** บนคอมพิวเตอร์ของคุณ\n` +
+      `2. นำ Key ด้านบนไปวางในช่อง **License Key** แล้วกด Login\n` +
+      `3. ตั้งค่าหน้าจอ Emulator (1280x720 240DPI) แล้วเริ่มฟาร์มได้ทันที!\n\n` +
+      `⚠️ *หมายเหตุ: คีย์นี้เป็นความลับเฉพาะคุณ มีอายุการใช้งาน 2 ชั่วโมงหลังจากเริ่มเปิดใช้งาน*`
+    )
+    .setColor('#2ECC71')
+    .setFooter({ text: 'CookieRunX Auto-Farm System' })
+    .setTimestamp();
+
+  return interaction.reply({
+    embeds: [successEmbed],
+    ephemeral: true
+  });
+}
+
 module.exports = { handleInteraction };
+

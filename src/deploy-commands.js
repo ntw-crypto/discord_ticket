@@ -58,6 +58,22 @@ const commands = [
       option.setName('button-label')
         .setDescription('ข้อความบนปุ่มกด (เช่น กดรับยศสมาชิก)')
         .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('trial')
+    .setDescription('🎁 กดรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 2 ชั่วโมง (1 บัญชีต่อ 1 สิทธิ์)'),
+  new SlashCommandBuilder()
+    .setName('setup-trial')
+    .setDescription('ส่งการ์ดปุ่มกดรับ Key ทดลองใช้ฟรีเข้าห้องนี้ (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  new SlashCommandBuilder()
+    .setName('add-trial-keys')
+    .setDescription('เติม Key ทดลองใช้เข้าสู่คลังแจกฟรี (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(option =>
+      option.setName('keys')
+        .setDescription('ใส่ Key ที่ต้องการเติม (คั่นด้วยจุลภาคหรือเว้นวรรค เช่น KEY1, KEY2)')
+        .setRequired(true)
     )
 ].map(command => command.toJSON());
 
