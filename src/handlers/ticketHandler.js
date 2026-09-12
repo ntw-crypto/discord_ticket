@@ -160,13 +160,13 @@ async function handleInteraction(interaction) {
     // คำสั่ง /setup-trial ส่งการ์ดปุ่มแจก Key ทดลองใช้ฟรี
     if (commandName === 'setup-trial') {
       const trialEmbed = new EmbedBuilder()
-        .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี!')
+        .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 7 วัน!')
         .setDescription(
           `สัมผัสประสบการณ์ฟาร์มอัตโนมัติ ปล่อยบอทเล่นให้ 24 ชม.\n` +
-          `> ✨ **สิทธิ์การใช้งาน**: ทดลองใช้ฟรี 2 ชั่วโมงเต็ม\n` +
+          `> ✨ **สิทธิ์การใช้งาน**: ทดลองใช้ฟรี 7 วันเต็ม\n` +
           `> ⚡ **เงื่อนไข**: จำกัด 1 สิทธิ์ ต่อ 1 บัญชี Discord เท่านั้น\n` +
           `> 🛡️ **ความปลอดภัย**: ปลอดภัย ไม่โดนแบน (Safe & Undetected)\n\n` +
-          `กดปุ่ม **"🎁 รับ Key ทดลองใช้ฟรี"** ด้านล่างเพื่อรับคีย์ทันที!`
+          `กดปุ่ม **"🎁 รับ Key ทดลองใช้ฟรี 7 วัน"** ด้านล่างเพื่อรับคีย์ทันที!`
         )
         .setColor('#D4AF37')
         .setFooter({ text: 'CookieRunX Auto-Bot Trial System' })
@@ -175,7 +175,7 @@ async function handleInteraction(interaction) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('btn_claim_trial')
-          .setLabel('รับ Key ทดลองใช้ฟรี')
+          .setLabel('รับ Key ทดลองใช้ฟรี 7 วัน')
           .setEmoji('🎁')
           .setStyle(ButtonStyle.Success)
       );
@@ -559,7 +559,7 @@ async function handleTrialClaim(interaction) {
 
   // กรณีรับสิทธิ์สำเร็จ
   const successEmbed = new EmbedBuilder()
-    .setTitle('🎉 ยินดีด้วย! คุณได้รับ Key ทดลองใช้ฟรี 2 ชั่วโมง')
+    .setTitle('🎉 ยินดีด้วย! คุณได้รับ Key ทดลองใช้ฟรี 7 วัน')
     .setDescription(
       `ขอขอบคุณที่สนใจโปรแกรมบอทช่วยฟาร์ม **CookieRunX** ✨\n\n` +
       `🔑 **License Key ของคุณ:**\n` +
@@ -568,7 +568,7 @@ async function handleTrialClaim(interaction) {
       `1. เปิดโปรแกรมบอท **CookieRunX** บนคอมพิวเตอร์ของคุณ\n` +
       `2. นำ Key ด้านบนไปวางในช่อง **License Key** แล้วกด Login\n` +
       `3. ตั้งค่าหน้าจอ Emulator (1280x720 240DPI) แล้วเริ่มฟาร์มได้ทันที!\n\n` +
-      `⚠️ *หมายเหตุ: คีย์นี้เป็นความลับเฉพาะคุณ มีอายุการใช้งาน 2 ชั่วโมงหลังจากเริ่มเปิดใช้งาน*`
+      `⚠️ *หมายเหตุ: คีย์นี้เป็นความลับเฉพาะคุณ มีอายุการใช้งาน 7 วันหลังจากเริ่มเปิดใช้งาน*`
     )
     .setColor('#2ECC71')
     .setFooter({ text: 'CookieRunX Auto-Farm System' })

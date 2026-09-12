@@ -61,7 +61,7 @@ const commands = [
     ),
   new SlashCommandBuilder()
     .setName('trial')
-    .setDescription('🎁 กดรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 2 ชั่วโมง (1 บัญชีต่อ 1 สิทธิ์)'),
+    .setDescription('🎁 กดรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 7 วัน (1 บัญชีต่อ 1 สิทธิ์)'),
   new SlashCommandBuilder()
     .setName('setup-trial')
     .setDescription('ส่งการ์ดปุ่มกดรับ Key ทดลองใช้ฟรีเข้าห้องนี้ (เฉพาะแอดมิน)')
