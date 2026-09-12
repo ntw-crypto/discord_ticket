@@ -34,10 +34,29 @@ const commands = [
       option.setName('title')
         .setDescription('หัวข้อการ์ด (Title)')
         .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('setup-role')
+    .setDescription('ส่งการ์ดปุ่มกดรับยศด้วยตัวเอง (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addRoleOption(option =>
+      option.setName('role')
+        .setDescription('ยศที่ต้องการให้สมาชิกกดรับ')
+        .setRequired(false)
     )
-    .addAttachmentOption(option =>
-      option.setName('image')
-        .setDescription('แนบรูปภาพในการ์ด (ถ้ามี)')
+    .addStringOption(option =>
+      option.setName('title')
+        .setDescription('หัวข้อการ์ด (ไม่ใส่จะมีค่าเริ่มต้น)')
+        .setRequired(false)
+    )
+    .addStringOption(option =>
+      option.setName('description')
+        .setDescription('คำอธิบาย (ไม่ใส่จะมีค่าเริ่มต้น)')
+        .setRequired(false)
+    )
+    .addStringOption(option =>
+      option.setName('button-label')
+        .setDescription('ข้อความบนปุ่มกด (เช่น กดรับยศสมาชิก)')
         .setRequired(false)
     )
 ].map(command => command.toJSON());

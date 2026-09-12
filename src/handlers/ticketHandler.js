@@ -113,11 +113,98 @@ async function handleInteraction(interaction) {
         ephemeral: true
       });
     }
+
+    // คำสั่ง /setup-role สั่งส่งการ์ดปุ่มกดรับยศ
+    if (commandName === 'setup-role') {
+      const targetRole = interaction.options.getRole('role') || interaction.guild.roles.cache.get('1545757478573178941');
+      
+      if (!targetRole) {
+        return interaction.reply({
+          content: '❌ ไม่พบยศดังกล่าว กรุณาตรวจสอบ Role ID หรือเลือกยศที่ต้องการ',
+          ephemeral: true
+        });
+      }
+
+      const title = interaction.options.getString('title') || '👑 ยืนยันตัวตนเพื่อรับยศ / Get Verified Role';
+      const description = interaction.options.getString('description') || 
+        `กดปุ่มด้านล่างเพื่อรับยศ <@&${targetRole.id}>\n> ✨ ปลดล็อกการเข้าถึงห้องต่างๆ ในเซิร์ฟเวอร์\n> 🔔 ได้รับการแจ้งเตือนข่าวสารและอัปเดตบอท CookieRun ก่อนใคร`;
+      const buttonLabel = interaction.options.getString('button-label') || `รับยศ ${targetRole.name}`;
+
+      const roleEmbed = new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(description)
+        .setColor('#D4AF37')
+        .setFooter({ text: 'CookieRunX Role Assignment • กดปุ่มอีกครั้งเพื่อถอดยศออก' })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`btn_role_${targetRole.id}`)
+          .setLabel(buttonLabel)
+          .setEmoji('✨')
+          .setStyle(ButtonStyle.Success)
+      );
+
+      await interaction.channel.send({
+        embeds: [roleEmbed],
+        components: [row]
+      });
+
+      return interaction.reply({
+        content: `✅ ส่งการ์ดกดรับยศ <@&${targetRole.id}> เรียบร้อยแล้ว!`,
+        ephemeral: true
+      });
+    }
   }
 
   // 2. จัดการเมื่อกดปุ่ม (Buttons)
   if (interaction.isButton()) {
     const { customId, channel, user, guild } = interaction;
+
+    // ปุ่มกดรับยศ / ถอดยศอัตโนมัติ (Role Toggle Button)
+    if (customId.startsWith('btn_role_')) {
+      const roleId = customId.replace('btn_role_', '');
+      const member = interaction.member;
+      const role = guild.roles.cache.get(roleId);
+
+      if (!role) {
+        return interaction.reply({
+          content: '❌ ไม่พบยศนี้ในเซิร์ฟเวอร์ (อาจถูกลบไปแล้ว)',
+          ephemeral: true
+        });
+      }
+
+      // ตรวจสอบระดับยศของบอทว่าสูงกว่ายศที่จะให้หรือไม่
+      const botMember = guild.members.me;
+      if (role.position >= botMember.roles.highest.position) {
+        return interaction.reply({
+          content: '⚠️ บอทไม่สามารถให้ยศนี้ได้ เนื่องจากตำแหน่งยศของบอทอยู่ต่ำกว่ายศนี้ (กรุณาลากยศบอทขึ้นไปอยู่เหนือยศนี้ในการตั้งค่าเซิร์ฟเวอร์)',
+          ephemeral: true
+        });
+      }
+
+      try {
+        if (member.roles.cache.has(roleId)) {
+          await member.roles.remove(role);
+          return interaction.reply({
+            content: `➖ **ถอดยศ** <@&${role.id}> ออกจากคุณเรียบร้อยแล้ว`,
+            ephemeral: true
+          });
+        } else {
+          await member.roles.add(role);
+          return interaction.reply({
+            content: `🎉 **รับยศสำเร็จ!** คุณได้รับยศ <@&${role.id}> เรียบร้อยแล้ว ยินดีต้อนรับครับ ✨`,
+            ephemeral: true
+          });
+        }
+      } catch (err) {
+        console.error('Error toggling role:', err);
+        return interaction.reply({
+          content: '❌ เกิดข้อผิดพลาดในการปรับยศ กรุณาตรวจสอบสิทธิ์ Manage Roles ของบอท',
+          ephemeral: true
+        });
+      }
+    }
 
     // ปุ่มกดเปิด Ticket
     if (customId === 'ticket_btn_create') {
