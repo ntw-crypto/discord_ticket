@@ -8,7 +8,38 @@ const commands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   new SlashCommandBuilder()
     .setName('close-ticket')
-    .setDescription('ปิด Ticket ปัจจุบัน')
+    .setDescription('ปิด Ticket ปัจจุบัน'),
+  new SlashCommandBuilder()
+    .setName('say')
+    .setDescription('สั่งให้บอทส่งข้อความแทนเรา (เฉพาะทีมงาน/แอดมิน)')
+    .addStringOption(option =>
+      option.setName('message')
+        .setDescription('ข้อความที่ต้องการให้บอทพิมพ์แทน')
+        .setRequired(true)
+    )
+    .addAttachmentOption(option =>
+      option.setName('attachment')
+        .setDescription('แนบรูปภาพหรือไฟล์ (ถ้ามี)')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('say-embed')
+    .setDescription('สั่งให้บอทส่งข้อความแบบการ์ด Embed สวยหรูแทนเรา')
+    .addStringOption(option =>
+      option.setName('message')
+        .setDescription('ข้อความในการ์ด Embed')
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName('title')
+        .setDescription('หัวข้อการ์ด (Title)')
+        .setRequired(false)
+    )
+    .addAttachmentOption(option =>
+      option.setName('image')
+        .setDescription('แนบรูปภาพในการ์ด (ถ้ามี)')
+        .setRequired(false)
+    )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

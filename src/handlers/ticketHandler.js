@@ -46,6 +46,73 @@ async function handleInteraction(interaction) {
     if (commandName === 'close-ticket') {
       return askCloseConfirmation(interaction);
     }
+
+    // คำสั่ง /say สั่งให้บอทพิมพ์ข้อความธรรมดาแทนเรา
+    if (commandName === 'say') {
+      const staffRoleId = process.env.STAFF_ROLE_ID;
+      const member = interaction.member;
+
+      const isStaff = member.permissions.has(PermissionFlagsBits.Administrator) ||
+        (staffRoleId && member.roles.cache.has(staffRoleId));
+
+      if (!isStaff) {
+        return interaction.reply({
+          content: '❌ เฉพาะทีมงานหรือแอดมินเท่านั้นที่สามารถใช้คำสั่งนี้ได้ครับ',
+          ephemeral: true
+        });
+      }
+
+      const messageText = interaction.options.getString('message');
+      const attachment = interaction.options.getAttachment('attachment');
+
+      const sendOptions = { content: messageText };
+      if (attachment) {
+        sendOptions.files = [attachment.url];
+      }
+
+      await interaction.channel.send(sendOptions);
+
+      return interaction.reply({
+        content: '✅ ส่งข้อความแทนเรียบร้อยแล้ว!',
+        ephemeral: true
+      });
+    }
+
+    // คำสั่ง /say-embed สั่งให้บอทส่งการ์ด Embed สวยหรูแทนเรา
+    if (commandName === 'say-embed') {
+      const staffRoleId = process.env.STAFF_ROLE_ID;
+      const member = interaction.member;
+
+      const isStaff = member.permissions.has(PermissionFlagsBits.Administrator) ||
+        (staffRoleId && member.roles.cache.has(staffRoleId));
+
+      if (!isStaff) {
+        return interaction.reply({
+          content: '❌ เฉพาะทีมงานหรือแอดมินเท่านั้นที่สามารถใช้คำสั่งนี้ได้ครับ',
+          ephemeral: true
+        });
+      }
+
+      const messageText = interaction.options.getString('message');
+      const title = interaction.options.getString('title');
+      const image = interaction.options.getAttachment('image');
+
+      const embed = new EmbedBuilder()
+        .setDescription(messageText)
+        .setColor('#D4AF37')
+        .setFooter({ text: 'CookieRunX Staff Support' })
+        .setTimestamp();
+
+      if (title) embed.setTitle(title);
+      if (image) embed.setImage(image.url);
+
+      await interaction.channel.send({ embeds: [embed] });
+
+      return interaction.reply({
+        content: '✅ ส่งการ์ด Embed แทนเรียบร้อยแล้ว!',
+        ephemeral: true
+      });
+    }
   }
 
   // 2. จัดการ Modal Submit (เมื่อส่งฟอร์มเขียนรีวิว)
