@@ -83,7 +83,11 @@ const commands = [
       option.setName('file')
         .setDescription('แนบไฟล์ .txt ที่มี Key (1 บรรทัดต่อ 1 คีย์)')
         .setRequired(true)
-    )
+    ),
+  new SlashCommandBuilder()
+    .setName('check-keys')
+    .setDescription('📊 ตรวจสอบจำนวน Key คงเหลือในคลังและประวัติการแจก (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

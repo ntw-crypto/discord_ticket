@@ -11,7 +11,7 @@ const {
 } = require('discord.js');
 const discordTranscripts = require('discord-html-transcripts');
 const config = require('../../config.json');
-const { claimTrialKey, addKeysToPool, getTrialKeysPool } = require('../services/trialService');
+const { claimTrialKey, addKeysToPool, getTrialKeysPool, getClaimedUsers } = require('../services/trialService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -255,6 +255,44 @@ async function handleInteraction(interaction) {
           content: '❌ เกิดข้อผิดพลาดในการอ่านไฟล์ Key กรุณาลองใหม่อีกครั้ง'
         });
       }
+    }
+
+    // คำสั่ง /check-keys ตรวจสอบยอด Key คงเหลือและสถิติ
+    if (commandName === 'check-keys') {
+      const pool = getTrialKeysPool();
+      const claimed = getClaimedUsers();
+      const claimedCount = Object.keys(claimed).length;
+
+      const statsEmbed = new EmbedBuilder()
+        .setTitle('📊 รายงานสถานะคลัง License Key (CookieRunX)')
+        .setDescription('ข้อมูลสถิติ License Key ทดลองใช้ฟรี 7 วันในระบบปัจจุบัน')
+        .addFields(
+          {
+            name: '📦 Key คงเหลือในคลัง (พร้อมแจก)',
+            value: `\`\`\`fix\n${pool.length} คีย์\n\`\`\``,
+            inline: true
+          },
+          {
+            name: '👥 สมาชิกที่รับไปแล้ว',
+            value: `\`\`\`yaml\n${claimedCount} คน\n\`\`\``,
+            inline: true
+          },
+          {
+            name: '⚙️ ระบบการจ่าย Key',
+            value: pool.length > 0 
+              ? '✅ **โหมดจ่าย Key จริงจากคลัง**: ดึงคีย์ที่แอดมินเติมไว้ไปแจกอัตโนมัติ' 
+              : '⚡ **โหมดสุ่มสร้างอัตโนมัติ**: คลังว่าง ระบบจะสุ่ม Key รูปแบบ `CKRX-TRIAL-XXXX-XXXX` ให้แทน',
+            inline: false
+          }
+        )
+        .setColor('#D4AF37')
+        .setFooter({ text: 'เฉพาะแอดมินเท่านั้นที่มองเห็นข้อความนี้' })
+        .setTimestamp();
+
+      return interaction.reply({
+        embeds: [statsEmbed],
+        ephemeral: true
+      });
     }
   }
 
