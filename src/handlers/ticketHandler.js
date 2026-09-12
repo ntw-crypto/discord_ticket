@@ -134,7 +134,7 @@ async function handleInteraction(interaction) {
         .setTitle(title)
         .setDescription(description)
         .setColor('#D4AF37')
-        .setFooter({ text: 'CookieRunX Role Assignment • กดปุ่มอีกครั้งเพื่อถอดยศออก' })
+        .setFooter({ text: 'CookieRunX Role Assignment' })
         .setTimestamp();
 
       const row = new ActionRowBuilder().addComponents(
@@ -161,7 +161,7 @@ async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     const { customId, channel, user, guild } = interaction;
 
-    // ปุ่มกดรับยศ / ถอดยศอัตโนมัติ (Role Toggle Button)
+    // ปุ่มกดรับยศอัตโนมัติ (ห้ามถอดยศเอง)
     if (customId.startsWith('btn_role_')) {
       const roleId = customId.replace('btn_role_', '');
       const member = interaction.member;
@@ -185,9 +185,8 @@ async function handleInteraction(interaction) {
 
       try {
         if (member.roles.cache.has(roleId)) {
-          await member.roles.remove(role);
           return interaction.reply({
-            content: `➖ **ถอดยศ** <@&${role.id}> ออกจากคุณเรียบร้อยแล้ว`,
+            content: `⚠️ คุณมียศ <@&${role.id}> อยู่แล้วครับ (ไม่สามารถถอดยศเองได้ หากต้องการถอดยศกรุณาติดต่อแอดมิน)`,
             ephemeral: true
           });
         } else {
