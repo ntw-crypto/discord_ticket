@@ -114,12 +114,23 @@ async function handleInteraction(interaction) {
           });
         }
 
-        const channelName = `${categoryData.prefix}-${user.username}`.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        // ตรวจสอบความถูกต้องของ Parent Category
+        let parentCategoryId = process.env.TICKET_CATEGORY_ID;
+        if (parentCategoryId) {
+          const cat = guild.channels.cache.get(parentCategoryId);
+          if (!cat || cat.type !== ChannelType.GuildCategory) {
+            console.warn(`[Ticket] Category ID "${parentCategoryId}" ไม่ถูกต้องหรือไม่ใช่หมวดหมู่ (Category) กำลังสร้างห้องที่ระดับรูทแทน`);
+            parentCategoryId = null;
+          }
+        }
+
+        const safeUsername = (user.username || 'user').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 15) || 'user';
+        const channelName = `${categoryData.prefix}-${safeUsername}-${Date.now().toString().slice(-4)}`;
 
         const ticketChannel = await guild.channels.create({
           name: channelName,
           type: ChannelType.GuildText,
-          parent: process.env.TICKET_CATEGORY_ID || null,
+          parent: parentCategoryId || null,
           permissionOverwrites: permissionOverwrites
         });
 
