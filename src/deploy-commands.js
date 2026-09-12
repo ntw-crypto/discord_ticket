@@ -87,7 +87,26 @@ const commands = [
   new SlashCommandBuilder()
     .setName('check-keys')
     .setDescription('📊 ตรวจสอบจำนวน Key คงเหลือในคลังและประวัติการแจก (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  new SlashCommandBuilder()
+    .setName('broadcast')
+    .setDescription('📢 ส่งข้อความประกาศหาลูกค้า/สมาชิกทุกคนทาง DM (เฉพาะแอดมิน)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(option =>
+      option.setName('message')
+        .setDescription('ข้อความที่ต้องการบรอดแคสต์ส่งถึงทุกคน')
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName('title')
+        .setDescription('หัวข้อประกาศ (ไม่ระบุจะมีค่าเริ่มต้น)')
+        .setRequired(false)
+    )
+    .addRoleOption(option =>
+      option.setName('target-role')
+        .setDescription('ส่งเฉพาะคนที่มียศนี้ (หากไม่ระบุจะส่งหาสมาชิกทุกคนในเซิร์ฟเวอร์)')
+        .setRequired(false)
+    )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

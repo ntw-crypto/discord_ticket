@@ -294,6 +294,87 @@ async function handleInteraction(interaction) {
         ephemeral: true
       });
     }
+
+    // คำสั่ง /broadcast สำหรับแอดมินส่งประกาศหาทุกคนทาง DM
+    if (commandName === 'broadcast') {
+      const messageText = interaction.options.getString('message');
+      const title = interaction.options.getString('title') || '📢 ประกาศสำคัญจาก CookieRunX';
+      const targetRole = interaction.options.getRole('target-role');
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        // ดึงรายชื่อสมาชิกทั้งหมด
+        const allMembers = await interaction.guild.members.fetch();
+        // กรองเฉพาะคนจริง (ไม่เอาบอท) และกรองตาม Role (ถ้ามีการเลือก)
+        const targetMembers = allMembers.filter(member => {
+          if (member.user.bot) return false;
+          if (targetRole) {
+            return member.roles.cache.has(targetRole.id);
+          }
+          return true;
+        });
+
+        const totalTargets = targetMembers.size;
+        if (totalTargets === 0) {
+          return interaction.editReply({
+            content: '⚠️ ไม่พบบัญชีสมาชิกที่ตรงตามเงื่อนไขในการส่งข้อความครับ'
+          });
+        }
+
+        const broadcastEmbed = new EmbedBuilder()
+          .setTitle(title)
+          .setDescription(messageText)
+          .setColor('#D4AF37')
+          .setFooter({
+            text: `CookieRunX Official Announcement • ส่งถึงคุณจาก ${interaction.guild.name}`,
+            iconURL: interaction.guild.iconURL({ dynamic: true }) || undefined
+          })
+          .setTimestamp();
+
+        let successCount = 0;
+        let failCount = 0;
+
+        await interaction.editReply({
+          content: `⏳ **กำลังเริ่มส่งข้อความประกาศ...** (เป้าหมายทั้งหมด: ${totalTargets} คน)\n> บอทจะทยอยส่งอย่างปลอดภัยเพื่อป้องกัน Rate Limit ของ Discord กรุณารอสักครู่...`
+        });
+
+        // ทยอยส่งพร้อมหน่วงเวลาเล็กน้อยเพื่อความปลอดภัย
+        for (const [memberId, member] of targetMembers) {
+          try {
+            await member.send({ embeds: [broadcastEmbed] });
+            successCount++;
+          } catch (err) {
+            failCount++; // กรณีสมาชิกปิดรับ DM จากคนนอก
+          }
+          // หน่วงเวลา 400ms ต่อคนเพื่อกันโดนบล็อก
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+
+        const resultEmbed = new EmbedBuilder()
+          .setTitle('✅ การบรอดแคสต์ส่งข้อความเสร็จสิ้นสมบูรณ์!')
+          .setDescription(`ระบบได้นำส่งข้อความประกาศไปยังสมาชิกเรียบร้อยแล้ว`)
+          .addFields(
+            { name: '🎯 กลุ่มเป้าหมาย', value: targetRole ? `<@&${targetRole.id}>` : 'สมาชิกทุกคนในเซิร์ฟเวอร์', inline: true },
+            { name: '✨ ส่งสำเร็จ', value: `\`${successCount}\` คน`, inline: true },
+            { name: '⚠️ ส่งไม่สำเร็จ (ปิดรับ DM)', value: `\`${failCount}\` คน`, inline: true },
+            { name: '📝 ข้อความที่ส่ง', value: `> ${messageText.slice(0, 200)}${messageText.length > 200 ? '...' : ''}`, inline: false }
+          )
+          .setColor('#2ECC71')
+          .setTimestamp();
+
+        return interaction.editReply({
+          content: null,
+          embeds: [resultEmbed]
+        });
+
+      } catch (err) {
+        console.error('Broadcast Error:', err);
+        return interaction.editReply({
+          content: '❌ เกิดข้อผิดพลาดในการบรอดแคสต์ข้อความ กรุณาลองใหม่อีกครั้ง'
+        });
+      }
+    }
   }
 
   // 2. จัดการเมื่อกดปุ่ม (Buttons)
