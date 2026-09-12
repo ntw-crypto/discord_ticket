@@ -123,12 +123,13 @@ async function handleInteraction(interaction) {
     if (customId === 'ticket_btn_create') {
       await interaction.deferReply({ ephemeral: true });
 
-      // นับจำนวน Ticket เพื่อรันเลขคิว 0001, 0002, ...
-      const ticketChannels = guild.channels.cache.filter(c => 
-        c.type === ChannelType.GuildText && (c.name.includes('ticket-') || c.name.includes('ticket'))
-      );
-      const ticketNumber = String(ticketChannels.size + 1).padStart(4, '0');
-      const channelName = `🎫・ticket-${ticketNumber}`;
+      // จัดรูปแบบชื่อผู้ใช้ให้ปลอดภัยสำหรับห้อง Discord (ไม่เกิน 15 ตัวอักษร)
+      const safeUsername = (user.username || 'user')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '')
+        .slice(0, 15) || 'user';
+      
+      const channelName = `🎫・${safeUsername}`;
 
       try {
         const staffRoleId = process.env.STAFF_ROLE_ID;
