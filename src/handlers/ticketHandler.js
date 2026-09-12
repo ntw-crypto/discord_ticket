@@ -4,7 +4,10 @@ const {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } = require('discord.js');
 const discordTranscripts = require('discord-html-transcripts');
 const config = require('../../config.json');
@@ -15,7 +18,6 @@ async function handleInteraction(interaction) {
     const { commandName } = interaction;
 
     if (commandName === 'setup-ticket') {
-      // การ์ดเล็ก ข้อความสั้น กระชับ สไตล์คลีนหรูหรา
       const embed = new EmbedBuilder()
         .setTitle(config.embed.title)
         .setDescription(config.embed.description)
@@ -46,7 +48,47 @@ async function handleInteraction(interaction) {
     }
   }
 
-  // 2. จัดการเมื่อกดปุ่ม (Buttons)
+  // 2. จัดการ Modal Submit (เมื่อส่งฟอร์มเขียนรีวิว)
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId.startsWith('modal_review_')) {
+      const stars = interaction.customId.split('_')[2]; // ดึงจำนวนดาว 1-5
+      const comment = interaction.fields.getTextInputValue('review_comment') || 'ไม่มีความคิดเห็นเพิ่มเติม';
+      const user = interaction.user;
+
+      const starEmoji = '⭐'.repeat(parseInt(stars, 10));
+
+      const reviewEmbed = new EmbedBuilder()
+        .setTitle('🌟 รีวิวใหม่จากลูกค้า!')
+        .setDescription(`> "${comment}"`)
+        .addFields(
+          { name: '⭐ คะแนนความพึงพอใจ', value: `${starEmoji} (${stars}/5 ดาว)`, inline: true },
+          { name: '👤 ลูกค้าผู้รีวิว', value: `<@${user.id}> (\`${user.tag}\`)`, inline: true }
+        )
+        .setColor('#F1C40F')
+        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: 'CookieRunX Customer Reviews' })
+        .setTimestamp();
+
+      const reviewsChannelId = process.env.REVIEWS_CHANNEL_ID;
+      if (reviewsChannelId) {
+        try {
+          const reviewsChannel = await interaction.client.channels.fetch(reviewsChannelId);
+          if (reviewsChannel) {
+            await reviewsChannel.send({ embeds: [reviewEmbed] });
+          }
+        } catch (e) {
+          console.error('Error sending review to channel:', e);
+        }
+      }
+
+      return interaction.reply({
+        content: `💖 **ขอบพระคุณสำหรับคะแนน ${starEmoji} และคำรีวิวเป็นอย่างยิ่งครับ!** ความคิดเห็นของคุณช่วยให้เราพัฒนาบริการให้ดียิ่งขึ้น ✨`,
+        ephemeral: true
+      });
+    }
+  }
+
+  // 3. จัดการเมื่อกดปุ่ม (Buttons)
   if (interaction.isButton()) {
     const { customId, channel, user, guild } = interaction;
 
@@ -93,8 +135,6 @@ async function handleInteraction(interaction) {
                 PermissionFlagsBits.ManageMessages
               ]
             });
-          } else {
-            console.warn(`[Ticket] Staff Role ID "${staffRoleId}" ไม่พบในเซิร์ฟเวอร์ ข้ามการเพิ่มสิทธิ์ยศนี้`);
           }
         }
 
@@ -107,10 +147,12 @@ async function handleInteraction(interaction) {
           }
         }
 
+        // บันทึก ownerId ไว้ใน topic เพื่อใช้ส่งรีวิวและแจ้งเตือน
         const ticketChannel = await guild.channels.create({
           name: channelName,
           type: ChannelType.GuildText,
           parent: parentCategoryId || null,
+          topic: `owner:${user.id}|claimed:none`,
           permissionOverwrites: permissionOverwrites
         });
 
@@ -163,7 +205,6 @@ async function handleInteraction(interaction) {
       const staffRoleId = process.env.STAFF_ROLE_ID;
       const member = interaction.member;
 
-      // ตรวจสอบว่าเป็นแอดมินหรือมียศทีมงานหรือไม่
       const isStaff = member.permissions.has(PermissionFlagsBits.Administrator) ||
         (staffRoleId && member.roles.cache.has(staffRoleId));
 
@@ -174,7 +215,14 @@ async function handleInteraction(interaction) {
         });
       }
 
-      // ปิดการใช้งานปุ่ม Claim เพื่อไม่ให้กดซ้ำ
+      // อัปเดต topic ว่าใคร claim
+      try {
+        const topic = channel.topic || '';
+        const ownerMatch = topic.match(/owner:(\d+)/);
+        const ownerId = ownerMatch ? ownerMatch[1] : '';
+        await channel.setTopic(`owner:${ownerId}|claimed:${user.id}`);
+      } catch (e) {}
+
       const updatedRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('ticket_btn_claimed')
@@ -213,8 +261,17 @@ async function handleInteraction(interaction) {
     if (customId === 'ticket_confirm_close') {
       await interaction.reply({ content: '🔒 กำลังบันทึกประวัติและปิดห้อง Ticket...', ephemeral: false });
 
+      // ดึง ID ผู้เปิดห้องจาก Channel Topic
+      let ownerId = null;
+      if (channel.topic) {
+        const match = channel.topic.match(/owner:(\d+)/);
+        if (match) ownerId = match[1];
+      }
+
+      // ทำ Transcript ก่อนลบ
+      let transcriptAttachment = null;
       try {
-        const transcript = await discordTranscripts.createTranscript(channel, {
+        transcriptAttachment = await discordTranscripts.createTranscript(channel, {
           limit: -1,
           fileName: `transcript-${channel.name}.html`,
           returnType: 'attachment',
@@ -224,21 +281,61 @@ async function handleInteraction(interaction) {
         const transcriptChannelId = process.env.TRANSCRIPT_CHANNEL_ID;
         if (transcriptChannelId) {
           const logChannel = interaction.guild.channels.cache.get(transcriptChannelId);
-          if (logChannel) {
+          if (logChannel && transcriptAttachment) {
             const logEmbed = new EmbedBuilder()
               .setTitle('📜 ประวัติการปิด Ticket')
               .addFields(
                 { name: 'ห้อง', value: `\`${channel.name}\``, inline: true },
-                { name: 'ผู้ปิด', value: `<@${user.id}>`, inline: true }
+                { name: 'ผู้ปิด', value: `<@${user.id}>`, inline: true },
+                { name: 'ผู้เปิดเคส', value: ownerId ? `<@${ownerId}>` : 'ไม่ระบุ', inline: true }
               )
               .setColor('#D4AF37')
               .setTimestamp();
 
-            await logChannel.send({ embeds: [logEmbed], files: [transcript] });
+            await logChannel.send({ embeds: [logEmbed], files: [transcriptAttachment] });
           }
         }
       } catch (err) {
         console.error('Transcript error:', err);
+      }
+
+      // ส่ง DM ให้ลูกค้าผู้เปิด Ticket เพื่อให้คะแนน 1-5 ดาว ⭐
+      if (ownerId) {
+        try {
+          const ownerUser = await interaction.client.users.fetch(ownerId);
+          if (ownerUser) {
+            const feedbackEmbed = new EmbedBuilder()
+              .setTitle('⭐ ให้คะแนนความพึงพอใจการบริการ (Review)')
+              .setDescription(
+                `สวัสดีครับคุณ <@${ownerId}>\n\n` +
+                `ห้อง **${channel.name}** ได้ถูกปิดเรียบร้อยแล้ว\n` +
+                `ทีมงาน **CookieRunX** ขอขอบคุณที่ให้โอกาสเราได้ดูแลคุณ ✨\n\n` +
+                `👉 **โปรดให้คะแนนความพึงพอใจการบริการในครั้งนี้ (1 - 5 ดาว):**`
+              )
+              .setColor('#F1C40F')
+              .setFooter({ text: 'กดเลือกดาวด้านล่างเพื่อประเมินและเขียนรีวิวสั้นๆ' })
+              .setTimestamp();
+
+            const ratingRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('rate_stars_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Success),
+              new ButtonBuilder().setCustomId('rate_stars_4').setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Primary),
+              new ButtonBuilder().setCustomId('rate_stars_3').setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('rate_stars_2').setLabel('⭐⭐').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('rate_stars_1').setLabel('⭐').setStyle(ButtonStyle.Danger)
+            );
+
+            // ส่งพร้อมแนบไฟล์ transcript ให้ลูกค้าเก็บไว้ดูด้วย
+            await ownerUser.send({
+              embeds: [feedbackEmbed],
+              components: [ratingRow],
+              files: transcriptAttachment ? [transcriptAttachment] : []
+            }).catch(() => {
+              console.log(`[DM] ไม่สามารถส่ง DM หาผู้ใช้ ${ownerId} ได้ (อาจปิดรับข้อความส่วนตัว)`);
+            });
+          }
+        } catch (dmErr) {
+          console.error('Error sending DM to ticket owner:', dmErr);
+        }
       }
 
       setTimeout(async () => {
@@ -248,6 +345,28 @@ async function handleInteraction(interaction) {
           console.error('Error deleting channel:', delError);
         }
       }, 2500);
+    }
+
+    // ปุ่มเลือกคะแนนดาว 1-5 ดาว (ส่ง Modal Pop-up ให้เขียนคำรีวิว)
+    if (customId.startsWith('rate_stars_')) {
+      const stars = customId.split('_')[2];
+
+      const modal = new ModalBuilder()
+        .setCustomId(`modal_review_${stars}`)
+        .setTitle(`ประเมินความพึงพอใจ (${stars} ดาว ⭐)`);
+
+      const commentInput = new TextInputBuilder()
+        .setCustomId('review_comment')
+        .setLabel('ข้อความรีวิว / ความคิดเห็นเพิ่มเติม')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('พิมพ์ความประทับใจ หรือข้อเสนอแนะที่นี่...')
+        .setRequired(false)
+        .setMaxLength(500);
+
+      const row = new ActionRowBuilder().addComponents(commentInput);
+      modal.addComponents(row);
+
+      return interaction.showModal(modal);
     }
 
     // ปุ่มยกเลิกการปิด
