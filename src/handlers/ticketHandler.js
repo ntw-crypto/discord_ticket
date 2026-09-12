@@ -72,7 +72,7 @@ async function handleInteraction(interaction) {
         const staffRoleId = process.env.STAFF_ROLE_ID;
         const permissionOverwrites = [
           {
-            id: guild.id,
+            id: guild.roles.everyone.id,
             deny: [PermissionFlagsBits.ViewChannel]
           },
           {
@@ -87,16 +87,22 @@ async function handleInteraction(interaction) {
           }
         ];
 
+        // ตรวจสอบว่ามี role นี้จริงในเซิร์ฟเวอร์หรือไม่
         if (staffRoleId) {
-          permissionOverwrites.push({
-            id: staffRoleId,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-              PermissionFlagsBits.ManageMessages
-            ]
-          });
+          const staffRole = guild.roles.cache.get(staffRoleId);
+          if (staffRole) {
+            permissionOverwrites.push({
+              id: staffRole.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages
+              ]
+            });
+          } else {
+            console.warn(`[Ticket] Staff Role ID "${staffRoleId}" ไม่พบในเซิร์ฟเวอร์ ข้ามการเพิ่มสิทธิ์ยศนี้`);
+          }
         }
 
         // ตรวจสอบ Parent Category
