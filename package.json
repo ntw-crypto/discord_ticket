@@ -1,0 +1,19 @@
+{
+  "name": "discord-ticket-bot",
+  "version": "1.0.0",
+  "description": "Discord Ticket Tool with built-in Web Server for 24/7 Hosting",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/deploy-commands.js"
+  },
+  "keywords": ["discord", "ticket", "bot"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.18.0",
+    "discord-html-transcripts": "^3.2.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

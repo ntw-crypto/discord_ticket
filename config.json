@@ -1,0 +1,31 @@
+{
+  "embed": {
+    "title": "🎫 ศูนย์บริการติดต่อทีมงาน / Support Tickets",
+    "description": "หากคุณมีปัญหา ต้องการสอบถาม หรือติดต่อทีมงาน กรุณากดเลือกหัวข้อด้านล่างเพื่อเปิดตั๋วติดต่อ (Ticket) ระบบจะสร้างห้องแชทส่วนตัวให้ทันที",
+    "color": "#5865F2",
+    "footer": "ระบบบริการช่วยเหลืออัตโนมัติ 24 ชม."
+  },
+  "categories": [
+    {
+      "id": "general",
+      "label": "สอบถามทั่วไป (General Inquiry)",
+      "emoji": "💬",
+      "description": "สอบถามข้อมูลทั่วไป ข้อสงสัย หรือการใช้งาน",
+      "prefix": "general"
+    },
+    {
+      "id": "support",
+      "label": "แจ้งปัญหาการใช้งาน (Technical Support)",
+      "emoji": "🛠️",
+      "description": "แจ้งปัญหา บั๊ก หรือข้อผิดพลาดต่างๆ",
+      "prefix": "support"
+    },
+    {
+      "id": "billing",
+      "label": "ติดต่อเรื่องสั่งซื้อ / ชำระเงิน (Billing & Shop)",
+      "emoji": "💳",
+      "description": "สอบถามเรื่องชำระเงิน สินค้า หรือบริการ",
+      "prefix": "billing"
+    }
+  ]
+}
