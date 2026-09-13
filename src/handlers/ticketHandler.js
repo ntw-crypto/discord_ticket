@@ -264,18 +264,30 @@ async function handleInteraction(interaction) {
       }
     }
 
-    // คำสั่ง /check-keys ตรวจสอบยอด Key คงเหลือและสถิติ
+    // คำสั่ง /check-keys ตรวจสอบยอด Key คงเหลือและสถิติ พร้อมแสดงรายชื่อ Key
     if (commandName === 'check-keys') {
       const pool = getTrialKeysPool();
       const claimed = getClaimedUsers();
       const claimedCount = Object.keys(claimed).length;
 
+      // จัดรูปแบบแสดงรายการ Key
+      let keyListText = 'คลังว่างเปล่า (ไม่มี Key ในระบบ)';
+      if (pool.length > 0) {
+        if (pool.length <= 20) {
+          // ถ้ามีไม่เกิน 20 คีย์ ให้แสดงทั้งหมดใน Embed
+          keyListText = pool.map((k, i) => `${i + 1}. \`${k}\``).join('\n');
+        } else {
+          // ถ้าเกิน 20 คีย์ ให้แสดง 20 คีย์แรก แล้วแจ้งยอดที่เหลือ
+          keyListText = pool.slice(0, 20).map((k, i) => `${i + 1}. \`${k}\``).join('\n') + `\n*...และอีก ${pool.length - 20} คีย์ (ดูในไฟล์แนบ)*`;
+        }
+      }
+
       const statsEmbed = new EmbedBuilder()
         .setTitle('📊 รายงานสถานะคลัง License Key (CookieRunX)')
-        .setDescription('ข้อมูลสถิติ License Key ทดลองใช้ฟรี 7 วันในระบบปัจจุบัน')
+        .setDescription('ข้อมูลสถิติและรายชื่อ License Key ทดลองใช้ฟรี 7 วันในระบบ')
         .addFields(
           {
-            name: '📦 Key คงเหลือในคลัง (พร้อมแจก)',
+            name: '📦 Key คงเหลือในคลัง',
             value: `\`\`\`fix\n${pool.length} คีย์\n\`\`\``,
             inline: true
           },
@@ -285,10 +297,8 @@ async function handleInteraction(interaction) {
             inline: true
           },
           {
-            name: '⚙️ ระบบการจ่าย Key',
-            value: pool.length > 0 
-              ? '✅ **โหมดจ่าย Key จริงจากคลัง**: ดึงคีย์ที่แอดมินเติมไว้ไปแจกอัตโนมัติ' 
-              : '⚡ **โหมดสุ่มสร้างอัตโนมัติ**: คลังว่าง ระบบจะสุ่ม Key รูปแบบ `CKRX-TRIAL-XXXX-XXXX` ให้แทน',
+            name: '🔑 รายชื่อ Key ที่พร้อมแจกในคลัง',
+            value: keyListText,
             inline: false
           }
         )
@@ -296,10 +306,21 @@ async function handleInteraction(interaction) {
         .setFooter({ text: 'เฉพาะแอดมินเท่านั้นที่มองเห็นข้อความนี้' })
         .setTimestamp();
 
-      return interaction.reply({
+      const replyOptions = {
         embeds: [statsEmbed],
         ephemeral: true
-      });
+      };
+
+      // ถ้ามีคีย์เกิน 20 คีย์ ให้แนบไฟล์ .txt สรุปคีย์ทั้งหมดให้อัตโนมัติ
+      if (pool.length > 20) {
+        const fileContent = pool.join('\n');
+        replyOptions.files = [{
+          attachment: Buffer.from(fileContent, 'utf-8'),
+          name: `remaining_keys_${pool.length}.txt`
+        }];
+      }
+
+      return interaction.reply(replyOptions);
     }
 
     // คำสั่ง /broadcast สำหรับแอดมินส่งประกาศหาทุกคนทาง DM
