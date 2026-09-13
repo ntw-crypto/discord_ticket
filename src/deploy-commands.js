@@ -106,6 +106,15 @@ const commands = [
       option.setName('target-role')
         .setDescription('ส่งเฉพาะคนที่มียศนี้ (หากไม่ระบุจะส่งหาสมาชิกทุกคนในเซิร์ฟเวอร์)')
         .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('clear-keys')
+    .setDescription('🗑️ ลบ Key ในคลัง (ลบทั้งหมด หรือ ลบเฉพาะคีย์ที่ระบุ) (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(option =>
+      option.setName('specific-key')
+        .setDescription('ระบุ Key ที่ต้องการลบ (หากไม่ใส่ จะเป็นการล้างคลังทั้งหมด)')
+        .setRequired(false)
     )
 ].map(command => command.toJSON());
 

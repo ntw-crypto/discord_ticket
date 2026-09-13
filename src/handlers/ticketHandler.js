@@ -11,7 +11,14 @@ const {
 } = require('discord.js');
 const discordTranscripts = require('discord-html-transcripts');
 const config = require('../../config.json');
-const { claimTrialKey, addKeysToPool, getTrialKeysPool, getClaimedUsers } = require('../services/trialService');
+const { 
+  claimTrialKey, 
+  addKeysToPool, 
+  clearAllTrialKeys, 
+  removeSpecificKey, 
+  getTrialKeysPool, 
+  getClaimedUsers 
+} = require('../services/trialService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -372,6 +379,36 @@ async function handleInteraction(interaction) {
         console.error('Broadcast Error:', err);
         return interaction.editReply({
           content: '❌ เกิดข้อผิดพลาดในการบรอดแคสต์ข้อความ กรุณาลองใหม่อีกครั้ง'
+        });
+      }
+    }
+
+    // คำสั่ง /clear-keys สำหรับล้าง Key ในคลัง
+    if (commandName === 'clear-keys') {
+      const specificKey = interaction.options.getString('specific-key');
+
+      if (specificKey) {
+        // ลบเฉพาะ Key ที่ระบุ
+        const removed = removeSpecificKey(specificKey.trim());
+        const remaining = getTrialKeysPool().length;
+
+        if (removed) {
+          return interaction.reply({
+            content: `✅ **ลบ Key สำเร็จ!**\n> 🗑️ ลบ Key: \`${specificKey.trim()}\` ออกจากคลังแล้ว\n> 📦 คงเหลือในคลัง: **${remaining}** คีย์`,
+            ephemeral: true
+          });
+        } else {
+          return interaction.reply({
+            content: `❌ ไม่พบ Key \`${specificKey.trim()}\` ในคลังครับ (อาจถูกแจกไปแล้วหรือพิมพ์ไม่ถูกต้อง)`,
+            ephemeral: true
+          });
+        }
+      } else {
+        // ล้างคลังทั้งหมด
+        const deletedCount = clearAllTrialKeys();
+        return interaction.reply({
+          content: `🗑️ **ล้างคลัง Key เรียบร้อยแล้ว!**\n> นำ Key ออกจากคลังทั้งหมด **${deletedCount}** คีย์ (ยอดคงเหลือปัจจุบัน: 0 คีย์)`,
+          ephemeral: true
         });
       }
     }

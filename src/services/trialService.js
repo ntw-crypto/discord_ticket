@@ -60,6 +60,26 @@ function addKeysToPool(newKeys) {
   return updated.length;
 }
 
+// ล้าง Key ทั้งหมดในคลัง
+function clearAllTrialKeys() {
+  const currentPool = getTrialKeysPool();
+  const deletedCount = currentPool.length;
+  saveTrialKeysPool([]);
+  return deletedCount;
+}
+
+// ลบ Key เฉพาะคีย์ที่ระบุ
+function removeSpecificKey(keyToRemove) {
+  const currentPool = getTrialKeysPool();
+  const index = currentPool.indexOf(keyToRemove);
+  if (index !== -1) {
+    currentPool.splice(index, 1);
+    saveTrialKeysPool(currentPool);
+    return true;
+  }
+  return false;
+}
+
 // ขอดึง Key แจกให้ผู้ใช้
 function claimTrialKey(userId, username) {
   const claimed = getClaimedUsers();
@@ -104,6 +124,8 @@ function claimTrialKey(userId, username) {
 module.exports = {
   claimTrialKey,
   addKeysToPool,
+  clearAllTrialKeys,
+  removeSpecificKey,
   getTrialKeysPool,
   getClaimedUsers
 };
