@@ -115,7 +115,11 @@ const commands = [
       option.setName('specific-key')
         .setDescription('ระบุ Key ที่ต้องการลบ (หากไม่ใส่ จะเป็นการล้างคลังทั้งหมด)')
         .setRequired(false)
-    )
+    ),
+  new SlashCommandBuilder()
+    .setName('claimed-keys')
+    .setDescription('📜 ดูรายชื่อสมาชิกที่เคยกดรับ Key ไปแล้ว พร้อม Key ที่ได้รับและเวลา (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

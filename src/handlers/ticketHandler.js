@@ -433,6 +433,66 @@ async function handleInteraction(interaction) {
         });
       }
     }
+
+    // คำสั่ง /claimed-keys ตรวจดูว่าใครเคยกดรับ Key ไปบ้าง
+    if (commandName === 'claimed-keys') {
+      const claimed = getClaimedUsers();
+      const entries = Object.entries(claimed);
+
+      if (entries.length === 0) {
+        return interaction.reply({
+          content: 'ℹ️ ยังไม่มีสมาชิกคนใดกดรับ Key ทดลองใช้ฟรีเลยครับ',
+          ephemeral: true
+        });
+      }
+
+      // เรียงลำดับจากคนที่รับล่าสุดขึ้นก่อน
+      entries.sort((a, b) => new Date(b[1].claimedAt) - new Date(a[1].claimedAt));
+
+      let listText = '';
+      if (entries.length <= 15) {
+        listText = entries.map(([userId, data], idx) => {
+          const time = Math.floor(new Date(data.claimedAt).getTime() / 1000);
+          return `${idx + 1}. <@${userId}> (\`${data.username}\`)\n   ↳ 🔑 Key: \`${data.key}\` • <t:${time}:R>`;
+        }).join('\n\n');
+      } else {
+        listText = entries.slice(0, 15).map(([userId, data], idx) => {
+          const time = Math.floor(new Date(data.claimedAt).getTime() / 1000);
+          return `${idx + 1}. <@${userId}> (\`${data.username}\`)\n   ↳ 🔑 Key: \`${data.key}\` • <t:${time}:R>`;
+        }).join('\n\n') + `\n\n*...และอีก ${entries.length - 15} คน (ดูทั้งหมดในไฟล์แนบ)*`;
+      }
+
+      const claimedEmbed = new EmbedBuilder()
+        .setTitle('📜 ประวัติสมาชิกที่เคยกดรับ Key ทดลองใช้ฟรี')
+        .setDescription(`ยอดรวมสมาชิกที่เคยกดรับไปแล้วทั้งหมด: **${entries.length}** คน`)
+        .addFields({
+          name: '👥 รายชื่อผู้รับและ Key ที่ได้ (เรียงจากล่าสุด)',
+          value: listText,
+          inline: false
+        })
+        .setColor('#D4AF37')
+        .setFooter({ text: 'CookieRunX Trial Audit • เฉพาะแอดมินเท่านั้น' })
+        .setTimestamp();
+
+      const replyOptions = {
+        embeds: [claimedEmbed],
+        ephemeral: true
+      };
+
+      // ถ้ามีประวัติมากกว่า 15 คน ให้ส่งไฟล์ .txt สรุปประวัติทั้งหมดให้ด้วย
+      if (entries.length > 15) {
+        const fileContent = entries.map(([userId, data], idx) => 
+          `${idx + 1}. User: ${data.username} (ID: ${userId}) | Key: ${data.key} | Date: ${data.claimedAt}`
+        ).join('\n');
+
+        replyOptions.files = [{
+          attachment: Buffer.from(fileContent, 'utf-8'),
+          name: `claimed_keys_history_${entries.length}.txt`
+        }];
+      }
+
+      return interaction.reply(replyOptions);
+    }
   }
 
   // 2. จัดการเมื่อกดปุ่ม (Buttons)
