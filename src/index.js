@@ -49,11 +49,31 @@ if (client.rest) {
   });
 }
 
-// ทดสอบการเชื่อมต่อไปยัง Discord API ผ่าน IPv4
-fetch('https://discord.com/api/v10/gateway')
-  .then(r => r.json())
-  .then(data => addDebugLog(`✅ Direct Gateway API Reachable: ${data.url}`))
-  .catch(err => addDebugLog(`❌ Direct Gateway API Failed: ${err.message}`));
+// ทดสอบการเชื่อมต่อไปยัง Discord API พร้อม Headers ให้ครบถ้วน
+if (process.env.DISCORD_TOKEN) {
+  fetch('https://discord.com/api/v10/gateway/bot', {
+    headers: {
+      'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+      'User-Agent': 'DiscordBot (https://github.com/ntw-crypto/discord_ticket, 1.0.0)'
+    }
+  })
+    .then(async (r) => {
+      const text = await r.text();
+      addDebugLog(`Direct API Status ${r.status}: ${text.slice(0, 100).replace(/[\r\n]+/g, ' ')}`);
+    })
+    .catch((err) => {
+      addDebugLog(`Direct API Fetch Error: ${err.message}`);
+    });
+}
+client.on('warn', (warning) => {
+  addDebugLog(`⚠️ Warn: ${warning}`);
+});
+
+if (client.rest) {
+  client.rest.on('response', (request, response) => {
+    addDebugLog(`REST: ${request.method} ${request.path} => HTTP ${response.status}`);
+  });
+}
 
 // Event เมื่อบอทออนไลน์
 client.once('ready', async () => {
