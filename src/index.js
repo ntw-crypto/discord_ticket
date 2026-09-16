@@ -15,8 +15,14 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message]
 });
 
+// ติดตามว่าบอทเคยต่อติดสำเร็จอย่างน้อย 1 ครั้งหรือไม่
+let hasEverBeenReady = false;
+global.lastLoginError = null;
+
 // Event เมื่อบอทออนไลน์
 client.once('ready', async () => {
+  hasEverBeenReady = true;
+  global.lastLoginError = null;
   console.log(`🤖 บอทออนไลน์แล้วในชื่อ: ${client.user.tag}`);
   
   client.user.setActivity('ระบบ Ticket Support 🎫', { type: ActivityType.Watching });
@@ -101,13 +107,13 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// Gateway Watchdog ป้องกัน Zombie Connection (บอทขึ้นออนไลน์แต่ไม่ตอบสนอง)
+// Gateway Watchdog ป้องกัน Zombie Connection (ทำงานเฉพาะเมื่อบอทเคยต่อติดสำเร็จแล้วเท่านั้น)
 let staleGatewayCount = 0;
 let stalePingCount = 0;
 
 setInterval(() => {
-  // ไม่ตรวจสอบช่วง 60 วินาทีแรกที่บอทกำลังเริ่มต้น
-  if (process.uptime() < 60) return;
+  // หากยังไม่เคยต่อติดสำเร็จมาก่อน จะไม่บังคับปิดโปรเซส เพื่อให้ดูค่า error / diagnostics ได้
+  if (!hasEverBeenReady) return;
 
   const wsStatus = client.ws?.status;
   const ping = client.ws?.ping;
@@ -146,15 +152,16 @@ process.on('uncaughtException', (err) => {
   console.error('❌ [Uncaught Exception]:', err);
 });
 
-// เริ่ม Express Web Server (สำหรับ Web Hosting / Uptime Monitor)
+// เริ่ม Express Web Server
 startWebServer(client);
 
 // Login เข้าสู่ Discord
 if (!process.env.DISCORD_TOKEN || process.env.DISCORD_TOKEN === 'your_bot_token_here') {
-  console.log('⚠️ [แจ้งเตือน] ยังไม่ได้ใส่ DISCORD_TOKEN ในไฟล์ .env');
-  console.log('👉 กรุณาสร้างไฟล์ .env โดยคัดลอกจาก .env.example แล้วใส่ Token ก่อนรัน');
+  global.lastLoginError = 'DISCORD_TOKEN is missing or default in environment variables!';
+  console.error('⚠️ [แจ้งเตือน] ยังไม่ได้ใส่ DISCORD_TOKEN ใน Environment Variables ของ Render');
 } else {
   client.login(process.env.DISCORD_TOKEN).catch((err) => {
+    global.lastLoginError = err.message;
     console.error('❌ ไม่สามารถเชื่อมต่อกับ Discord ได้:', err.message);
   });
 }

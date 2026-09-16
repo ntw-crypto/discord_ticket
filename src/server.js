@@ -36,7 +36,7 @@ function startWebServer(client) {
     };
   };
 
-  // Route / แสดงภาพรวมสถานะบอท
+  // Route / แสดงภาพรวมสถานะบอท และข้อมูลวินิจฉัย
   app.get('/', (req, res) => {
     const health = getBotHealth();
 
@@ -53,6 +53,12 @@ function startWebServer(client) {
         status: health.wsStatus,
         status_text: health.wsStatusText,
         ping_ms: health.ping
+      },
+      diagnostics: {
+        has_token: Boolean(process.env.DISCORD_TOKEN),
+        token_preview: process.env.DISCORD_TOKEN ? (process.env.DISCORD_TOKEN.slice(0, 6) + '...' + process.env.DISCORD_TOKEN.slice(-4)) : null,
+        client_id_set: Boolean(process.env.CLIENT_ID),
+        last_login_error: global.lastLoginError || null
       },
       uptime_seconds: Math.floor(health.uptime)
     };
@@ -83,19 +89,19 @@ function startWebServer(client) {
         uptime: Math.floor(health.uptime)
       });
     } else {
-      // ส่ง 503 ทันทีเมื่อ WebSocket หลุด/ค้าง เพื่อให้ UptimeRobot หรือโฮสต์ทราบว่าบอทมีปัญหา
       return res.status(503).json({
         status: 'UNHEALTHY',
         ws_status: health.wsStatusText,
         ping: health.ping,
         uptime: Math.floor(health.uptime),
-        error: 'Discord Gateway WebSocket is not READY'
+        error: 'Discord Gateway WebSocket is not READY',
+        last_login_error: global.lastLoginError || null
       });
     }
   });
 
-  app.listen(PORT, () => {
-    console.log(`[Web Server] HTTP server is running on port ${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Web Server] HTTP server is running on 0.0.0.0:${PORT}`);
   });
 }
 
