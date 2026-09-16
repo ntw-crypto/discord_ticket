@@ -1,3 +1,8 @@
+const dns = require('node:dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const { Client, GatewayIntentBits, Partials, ActivityType } = require('discord.js');
 require('dotenv').config();
 
@@ -12,7 +17,10 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers
   ],
-  partials: [Partials.Channel, Partials.Message]
+  partials: [Partials.Channel, Partials.Message],
+  rest: {
+    timeout: 15000
+  }
 });
 
 // ติดตามว่าบอทเคยต่อติดสำเร็จอย่างน้อย 1 ครั้งหรือไม่
@@ -23,7 +31,8 @@ global.debugLogs = [];
 function addDebugLog(msg) {
   const time = new Date().toISOString().split('T')[1].slice(0, 8);
   global.debugLogs.push(`[${time}] ${msg}`);
-  if (global.debugLogs.length > 25) global.debugLogs.shift();
+  if (global.debugLogs.length > 30) global.debugLogs.shift();
+  console.log(`[Debug] ${msg}`);
 }
 
 client.on('debug', (info) => {
@@ -35,12 +44,22 @@ if (client.rest) {
   client.rest.on('rateLimited', (info) => {
     addDebugLog(`⚠️ RATE_LIMITED: reset in ${info.timeToReset}ms, global: ${info.global}`);
   });
+  client.rest.on('invalidRequestWarning', (info) => {
+    addDebugLog(`⚠️ INVALID_REQ: count ${info.count}, remaining ${info.remainingTime}ms`);
+  });
 }
+
+// ทดสอบการเชื่อมต่อไปยัง Discord API ผ่าน IPv4
+fetch('https://discord.com/api/v10/gateway')
+  .then(r => r.json())
+  .then(data => addDebugLog(`✅ Direct Gateway API Reachable: ${data.url}`))
+  .catch(err => addDebugLog(`❌ Direct Gateway API Failed: ${err.message}`));
 
 // Event เมื่อบอทออนไลน์
 client.once('ready', async () => {
   hasEverBeenReady = true;
   global.lastLoginError = null;
+  addDebugLog(`🎉 บอทออนไลน์สำเร็จในชื่อ: ${client.user.tag}`);
   console.log(`🤖 บอทออนไลน์แล้วในชื่อ: ${client.user.tag}`);
   
   client.user.setActivity('ระบบ Ticket Support 🎫', { type: ActivityType.Watching });
@@ -57,23 +76,28 @@ client.once('ready', async () => {
 
 // Shard & Gateway Event Listeners เพื่อติดตามสถานะการเชื่อมต่อ
 client.on('shardDisconnect', (event, shardId) => {
+  addDebugLog(`⚠️ Shard ${shardId} Disconnected: Code ${event.code}`);
   console.warn(`⚠️ [Shard ${shardId}] บอทหลุดการเชื่อมต่อจาก Discord (Code: ${event.code}, Reason: ${event.reason || 'None'})`);
 });
 
 client.on('shardReconnecting', (shardId) => {
+  addDebugLog(`🔄 Shard ${shardId} Reconnecting...`);
   console.log(`🔄 [Shard ${shardId}] กำลังพยายามเชื่อมต่อใหม่กับ Discord Gateway...`);
 });
 
 client.on('shardResume', (shardId, replayedEvents) => {
+  addDebugLog(`✅ Shard ${shardId} Resumed (replayed: ${replayedEvents})`);
   console.log(`✅ [Shard ${shardId}] กู้คืน Session สำเร็จ (Replayed events: ${replayedEvents})`);
 });
 
 client.on('shardError', (error, shardId) => {
+  addDebugLog(`❌ Shard ${shardId} Error: ${error.message}`);
   console.error(`❌ [Shard ${shardId} Error]:`, error.message);
 });
 
 client.on('error', (error) => {
-  console.error('❌ [Discord Client Error]:', error.message);
+  addDebugLog(`❌ Client Error: ${error.message}`);
+  console.error(`❌ [Discord Client Error]:`, error.message);
 });
 
 // Event เมื่อมีการกดปุ่ม, คำสั่ง Slash Command, หรือ Dropdown
