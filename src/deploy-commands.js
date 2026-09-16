@@ -122,7 +122,11 @@ const commands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ].map(command => command.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+const restOptions = { version: '10' };
+if (process.env.DISCORD_API_PROXY) {
+  restOptions.api = process.env.DISCORD_API_PROXY;
+}
+const rest = new REST(restOptions).setToken(process.env.DISCORD_TOKEN);
 
 async function deployCommands() {
   try {

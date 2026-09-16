@@ -19,6 +19,7 @@ const client = new Client({
   ],
   partials: [Partials.Channel, Partials.Message],
   rest: {
+    api: process.env.DISCORD_API_PROXY || 'https://discord.com/api',
     timeout: 15000
   }
 });
