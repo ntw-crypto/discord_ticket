@@ -18,6 +18,24 @@ const client = new Client({
 // ติดตามว่าบอทเคยต่อติดสำเร็จอย่างน้อย 1 ครั้งหรือไม่
 let hasEverBeenReady = false;
 global.lastLoginError = null;
+global.debugLogs = [];
+
+function addDebugLog(msg) {
+  const time = new Date().toISOString().split('T')[1].slice(0, 8);
+  global.debugLogs.push(`[${time}] ${msg}`);
+  if (global.debugLogs.length > 25) global.debugLogs.shift();
+}
+
+client.on('debug', (info) => {
+  const safeInfo = typeof info === 'string' ? info.replace(/Bot\s+[A-Za-z0-9._-]+/g, 'Bot [REDACTED]') : String(info);
+  addDebugLog(safeInfo);
+});
+
+if (client.rest) {
+  client.rest.on('rateLimited', (info) => {
+    addDebugLog(`⚠️ RATE_LIMITED: reset in ${info.timeToReset}ms, global: ${info.global}`);
+  });
+}
 
 // Event เมื่อบอทออนไลน์
 client.once('ready', async () => {
@@ -158,10 +176,15 @@ startWebServer(client);
 // Login เข้าสู่ Discord
 if (!process.env.DISCORD_TOKEN || process.env.DISCORD_TOKEN === 'your_bot_token_here') {
   global.lastLoginError = 'DISCORD_TOKEN is missing or default in environment variables!';
+  addDebugLog('⚠️ DISCORD_TOKEN is missing or default in environment variables!');
   console.error('⚠️ [แจ้งเตือน] ยังไม่ได้ใส่ DISCORD_TOKEN ใน Environment Variables ของ Render');
 } else {
-  client.login(process.env.DISCORD_TOKEN).catch((err) => {
+  addDebugLog('🔑 Starting client.login()...');
+  client.login(process.env.DISCORD_TOKEN).then(() => {
+    addDebugLog('✅ client.login() resolved successfully!');
+  }).catch((err) => {
     global.lastLoginError = err.message;
+    addDebugLog(`❌ client.login() failed: ${err.message}`);
     console.error('❌ ไม่สามารถเชื่อมต่อกับ Discord ได้:', err.message);
   });
 }

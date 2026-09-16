@@ -58,7 +58,8 @@ function startWebServer(client) {
         has_token: Boolean(process.env.DISCORD_TOKEN),
         token_preview: process.env.DISCORD_TOKEN ? (process.env.DISCORD_TOKEN.slice(0, 6) + '...' + process.env.DISCORD_TOKEN.slice(-4)) : null,
         client_id_set: Boolean(process.env.CLIENT_ID),
-        last_login_error: global.lastLoginError || null
+        last_login_error: global.lastLoginError || null,
+        debug_logs: global.debugLogs || []
       },
       uptime_seconds: Math.floor(health.uptime)
     };
