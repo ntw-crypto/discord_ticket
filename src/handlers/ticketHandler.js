@@ -26,6 +26,8 @@ async function handleInteraction(interaction) {
     const { commandName } = interaction;
 
     if (commandName === 'setup-ticket') {
+      await interaction.deferReply({ ephemeral: true });
+
       const embed = new EmbedBuilder()
         .setTitle(config.embed.title)
         .setDescription(config.embed.description)
@@ -45,9 +47,8 @@ async function handleInteraction(interaction) {
         components: [row]
       });
 
-      return interaction.reply({
-        content: '✅ ส่งการ์ด Ticket เรียบร้อยแล้ว!',
-        ephemeral: true
+      return interaction.editReply({
+        content: '✅ ส่งการ์ด Ticket เรียบร้อยแล้ว!'
       });
     }
 
@@ -70,6 +71,8 @@ async function handleInteraction(interaction) {
         });
       }
 
+      await interaction.deferReply({ ephemeral: true });
+
       const messageText = interaction.options.getString('message');
       const attachment = interaction.options.getAttachment('attachment');
 
@@ -80,9 +83,8 @@ async function handleInteraction(interaction) {
 
       await interaction.channel.send(sendOptions);
 
-      return interaction.reply({
-        content: '✅ ส่งข้อความแทนเรียบร้อยแล้ว!',
-        ephemeral: true
+      return interaction.editReply({
+        content: '✅ ส่งข้อความแทนเรียบร้อยแล้ว!'
       });
     }
 
@@ -101,6 +103,8 @@ async function handleInteraction(interaction) {
         });
       }
 
+      await interaction.deferReply({ ephemeral: true });
+
       const messageText = interaction.options.getString('message');
       const title = interaction.options.getString('title');
       const image = interaction.options.getAttachment('image');
@@ -116,15 +120,17 @@ async function handleInteraction(interaction) {
 
       await interaction.channel.send({ embeds: [embed] });
 
-      return interaction.reply({
-        content: '✅ ส่งการ์ด Embed แทนเรียบร้อยแล้ว!',
-        ephemeral: true
+      return interaction.editReply({
+        content: '✅ ส่งการ์ด Embed แทนเรียบร้อยแล้ว!'
       });
     }
 
     // คำสั่ง /setup-role สั่งส่งการ์ดปุ่มกดรับยศ
     if (commandName === 'setup-role') {
-      const targetRole = interaction.options.getRole('role') || interaction.guild.roles.cache.get('1545757478573178941');
+      let targetRole = interaction.options.getRole('role') || interaction.guild.roles.cache.get('1545757478573178941');
+      if (!targetRole) {
+        targetRole = await interaction.guild.roles.fetch('1545757478573178941').catch(() => null);
+      }
       
       if (!targetRole) {
         return interaction.reply({
@@ -132,6 +138,8 @@ async function handleInteraction(interaction) {
           ephemeral: true
         });
       }
+
+      await interaction.deferReply({ ephemeral: true });
 
       const title = interaction.options.getString('title') || '👑 ยืนยันตัวตนเพื่อรับยศ / Get Verified Role';
       const description = interaction.options.getString('description') || 
@@ -158,14 +166,15 @@ async function handleInteraction(interaction) {
         components: [row]
       });
 
-      return interaction.reply({
-        content: `✅ ส่งการ์ดกดรับยศ <@&${targetRole.id}> เรียบร้อยแล้ว!`,
-        ephemeral: true
+      return interaction.editReply({
+        content: `✅ ส่งการ์ดกดรับยศ <@&${targetRole.id}> เรียบร้อยแล้ว!`
       });
     }
 
     // คำสั่ง /setup-trial ส่งการ์ดปุ่มแจก Key ทดลองใช้ฟรี
     if (commandName === 'setup-trial') {
+      await interaction.deferReply({ ephemeral: true });
+
       const trialEmbed = new EmbedBuilder()
         .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 7 วัน!')
         .setDescription(
@@ -192,9 +201,8 @@ async function handleInteraction(interaction) {
         components: [row]
       });
 
-      return interaction.reply({
-        content: '✅ ส่งการ์ดแจก Key ทดลองใช้ฟรีเรียบร้อยแล้ว!',
-        ephemeral: true
+      return interaction.editReply({
+        content: '✅ ส่งการ์ดแจก Key ทดลองใช้ฟรีเรียบร้อยแล้ว!'
       });
     }
 
@@ -506,44 +514,44 @@ async function handleInteraction(interaction) {
 
     // ปุ่มกดรับยศอัตโนมัติ (ห้ามถอดยศเอง)
     if (customId.startsWith('btn_role_')) {
+      await interaction.deferReply({ ephemeral: true });
+
       const roleId = customId.replace('btn_role_', '');
       const member = interaction.member;
-      const role = guild.roles.cache.get(roleId);
+      let role = guild.roles.cache.get(roleId);
+      if (!role) {
+        role = await guild.roles.fetch(roleId).catch(() => null);
+      }
 
       if (!role) {
-        return interaction.reply({
-          content: '❌ ไม่พบยศนี้ในเซิร์ฟเวอร์ (อาจถูกลบไปแล้ว)',
-          ephemeral: true
+        return interaction.editReply({
+          content: '❌ ไม่พบยศนี้ในเซิร์ฟเวอร์ (อาจถูกลบไปแล้ว)'
         });
       }
 
       // ตรวจสอบระดับยศของบอทว่าสูงกว่ายศที่จะให้หรือไม่
-      const botMember = guild.members.me;
-      if (role.position >= botMember.roles.highest.position) {
-        return interaction.reply({
-          content: '⚠️ บอทไม่สามารถให้ยศนี้ได้ เนื่องจากตำแหน่งยศของบอทอยู่ต่ำกว่ายศนี้ (กรุณาลากยศบอทขึ้นไปอยู่เหนือยศนี้ในการตั้งค่าเซิร์ฟเวอร์)',
-          ephemeral: true
+      const botMember = guild.members.me || await guild.members.fetchMe().catch(() => null);
+      if (botMember && role.position >= botMember.roles.highest.position) {
+        return interaction.editReply({
+          content: '⚠️ บอทไม่สามารถให้ยศนี้ได้ เนื่องจากตำแหน่งยศของบอทอยู่ต่ำกว่ายศนี้ (กรุณาลากยศบอทขึ้นไปอยู่เหนือยศนี้ในการตั้งค่าเซิร์ฟเวอร์)'
         });
       }
 
       try {
         if (member.roles.cache.has(roleId)) {
-          return interaction.reply({
-            content: `⚠️ คุณมียศ <@&${role.id}> อยู่แล้วครับ (ไม่สามารถถอดยศเองได้ หากต้องการถอดยศกรุณาติดต่อแอดมิน)`,
-            ephemeral: true
+          return interaction.editReply({
+            content: `⚠️ คุณมียศ <@&${role.id}> อยู่แล้วครับ (ไม่สามารถถอดยศเองได้ หากต้องการถอดยศกรุณาติดต่อแอดมิน)`
           });
         } else {
           await member.roles.add(role);
-          return interaction.reply({
-            content: `🎉 **รับยศสำเร็จ!** คุณได้รับยศ <@&${role.id}> เรียบร้อยแล้ว ยินดีต้อนรับครับ ✨`,
-            ephemeral: true
+          return interaction.editReply({
+            content: `🎉 **รับยศสำเร็จ!** คุณได้รับยศ <@&${role.id}> เรียบร้อยแล้ว ยินดีต้อนรับครับ ✨`
           });
         }
       } catch (err) {
         console.error('Error toggling role:', err);
-        return interaction.reply({
-          content: '❌ เกิดข้อผิดพลาดในการปรับยศ กรุณาตรวจสอบสิทธิ์ Manage Roles ของบอท',
-          ephemeral: true
+        return interaction.editReply({
+          content: '❌ เกิดข้อผิดพลาดในการปรับยศ กรุณาตรวจสอบสิทธิ์ Manage Roles ของบอท'
         });
       }
     }
@@ -581,7 +589,10 @@ async function handleInteraction(interaction) {
 
         // ตรวจสอบว่ามี role นี้จริงในเซิร์ฟเวอร์หรือไม่
         if (staffRoleId) {
-          const staffRole = guild.roles.cache.get(staffRoleId);
+          let staffRole = guild.roles.cache.get(staffRoleId);
+          if (!staffRole) {
+            staffRole = await guild.roles.fetch(staffRoleId).catch(() => null);
+          }
           if (staffRole) {
             permissionOverwrites.push({
               id: staffRole.id,
@@ -598,7 +609,10 @@ async function handleInteraction(interaction) {
         // ตรวจสอบ Parent Category
         let parentCategoryId = process.env.TICKET_CATEGORY_ID;
         if (parentCategoryId) {
-          const cat = guild.channels.cache.get(parentCategoryId);
+          let cat = guild.channels.cache.get(parentCategoryId);
+          if (!cat) {
+            cat = await guild.channels.fetch(parentCategoryId).catch(() => null);
+          }
           if (!cat || cat.type !== ChannelType.GuildCategory) {
             parentCategoryId = null;
           }
@@ -816,6 +830,11 @@ async function askCloseConfirmation(interaction) {
 
 // ฟังก์ชันประมวลผลการขอรับ Key ทดลองใช้ฟรี
 async function handleTrialClaim(interaction) {
+  // รับทราบคำสั่งทันที ป้องกัน Interaction Timeout 3 วินาทีของ Discord
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: true });
+  }
+
   const user = interaction.user;
   const result = claimTrialKey(user.id, user.tag || user.username);
 
@@ -833,9 +852,8 @@ async function handleTrialClaim(interaction) {
       .setColor('#E74C3C')
       .setFooter({ text: 'CookieRunX Anti-Abuse Protection' });
 
-    return interaction.reply({
-      embeds: [alreadyEmbed],
-      ephemeral: true
+    return interaction.editReply({
+      embeds: [alreadyEmbed]
     });
   }
 
@@ -856,9 +874,8 @@ async function handleTrialClaim(interaction) {
     .setFooter({ text: 'CookieRunX Auto-Farm System' })
     .setTimestamp();
 
-  return interaction.reply({
-    embeds: [successEmbed],
-    ephemeral: true
+  return interaction.editReply({
+    embeds: [successEmbed]
   });
 }
 
