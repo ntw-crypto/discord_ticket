@@ -143,7 +143,7 @@ client.on('messageCreate', async (message) => {
 
   const channel = message.channel;
   // ตรวจสอบว่าเป็นห้อง Ticket หรือไม่
-  if (channel.name && (channel.name.startsWith('ticket-') || channel.name.includes('ticket'))) {
+  if (channel.name && (channel.name.startsWith('ticket-') || channel.name.includes('ticket') || channel.name.startsWith('🎫'))) {
     if (channel.topic && channel.topic.includes('owner:')) {
       const match = channel.topic.match(/owner:(\d+)/);
       if (match) {

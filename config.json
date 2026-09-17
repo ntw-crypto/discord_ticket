@@ -8,5 +8,9 @@
   "button": {
     "label": "เปิด Ticket ติดต่อ",
     "emoji": "📩"
+  },
+  "ticket": {
+    "channelFormat": "🎫・{number}",
+    "numberPadding": 4
   }
 }

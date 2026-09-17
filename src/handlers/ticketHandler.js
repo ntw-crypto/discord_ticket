@@ -19,6 +19,7 @@ const {
   getTrialKeysPool, 
   getClaimedUsers 
 } = require('../services/trialService');
+const { getNextTicketChannelName } = require('../services/ticketCounterService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -560,13 +561,8 @@ async function handleInteraction(interaction) {
     if (customId === 'ticket_btn_create') {
       await interaction.deferReply({ ephemeral: true });
 
-      // จัดรูปแบบชื่อผู้ใช้ให้ปลอดภัยสำหรับห้อง Discord (ไม่เกิน 15 ตัวอักษร)
-      const safeUsername = (user.username || 'user')
-        .toLowerCase()
-        .replace(/[^a-z0-9_-]/g, '')
-        .slice(0, 15) || 'user';
-      
-      const channelName = `🎫・${safeUsername}`;
+      const padding = config.ticket?.numberPadding || 4;
+      const channelName = await getNextTicketChannelName(guild, padding);
 
       try {
         const staffRoleId = process.env.STAFF_ROLE_ID;
