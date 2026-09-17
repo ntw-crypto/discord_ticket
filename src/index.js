@@ -9,6 +9,8 @@ require('dotenv').config();
 const { startWebServer } = require('./server');
 const { handleInteraction } = require('./handlers/ticketHandler');
 const { deployCommands } = require('./deploy-commands');
+const { getStockConfig, updateStockDashboard } = require('./services/stockService');
+const { addKeysToPool } = require('./services/trialService');
 
 const client = new Client({
   intents: [
@@ -142,6 +144,56 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.guild) return;
 
   const channel = message.channel;
+
+  // ตรวจสอบข้อความที่พิมพ์ในห้องสต็อก Key เพื่อดึง Key เข้าคลังอัตโนมัติ
+  const stockConfig = getStockConfig();
+  if (stockConfig && channel.id === stockConfig.channelId) {
+    const newKeys = [];
+
+    // 1. ตรวจสอบข้อความธรรมดา
+    if (message.content && message.content.trim().length > 0) {
+      const lines = message.content
+        .split(/[\r\n,]+/)
+        .map(l => l.trim())
+        .filter(l => l.length > 0 && !l.startsWith('#') && !l.startsWith('/'));
+      newKeys.push(...lines);
+    }
+
+    // 2. ตรวจสอบไฟล์แนบ (.txt)
+    if (message.attachments.size > 0) {
+      for (const [, file] of message.attachments) {
+        if (file.name.endsWith('.txt') || file.contentType?.includes('text')) {
+          try {
+            const resp = await fetch(file.url);
+            if (resp.ok) {
+              const text = await resp.text();
+              const fileKeys = text
+                .split(/[\r\n,]+/)
+                .map(l => l.trim())
+                .filter(l => l.length > 0 && !l.startsWith('#'));
+              newKeys.push(...fileKeys);
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (newKeys.length > 0) {
+      const totalRemaining = addKeysToPool(newKeys);
+      await message.react('✅').catch(() => {});
+      await updateStockDashboard(client);
+
+      const notice = await message.reply({
+        content: `🎉 **ดึง Key เข้าคลังสำเร็จ!** เพิ่มเข้าคลัง **${newKeys.length}** คีย์ (ยอดคงเหลือทั้งหมด: **${totalRemaining}** คีย์)`
+      }).catch(() => null);
+
+      if (notice) {
+        setTimeout(() => notice.delete().catch(() => {}), 6000);
+      }
+      return;
+    }
+  }
+
   // ตรวจสอบว่าเป็นห้อง Ticket หรือไม่
   if (channel.name && (channel.name.startsWith('ticket-') || channel.name.includes('ticket') || channel.name.startsWith('🎫'))) {
     if (channel.topic && channel.topic.includes('owner:')) {

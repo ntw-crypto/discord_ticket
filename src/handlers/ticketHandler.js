@@ -20,6 +20,12 @@ const {
   getClaimedUsers 
 } = require('../services/trialService');
 const { getNextTicketChannelName } = require('../services/ticketCounterService');
+const { 
+  buildStockEmbed, 
+  buildStockActionRow, 
+  saveStockConfig, 
+  updateStockDashboard 
+} = require('../services/stockService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -222,6 +228,8 @@ async function handleInteraction(interaction) {
       }
 
       const totalRemaining = addKeysToPool(keys);
+      updateStockDashboard(interaction.client).catch(() => {});
+
       return interaction.reply({
         content: `✅ เติม Key ทดลองใช้เข้าสู่คลังสำเร็จแล้ว **${keys.length}** คีย์ (คลังปัจจุบันมีทั้งหมด: **${totalRemaining}** คีย์)`,
         ephemeral: true
@@ -258,6 +266,7 @@ async function handleInteraction(interaction) {
         }
 
         const totalRemaining = addKeysToPool(extractedKeys);
+        updateStockDashboard(interaction.client).catch(() => {});
 
         return interaction.editReply({
           content: `🎉 **นำเข้า Key สำเร็จเรียบร้อย!**\n` +
@@ -423,6 +432,7 @@ async function handleInteraction(interaction) {
         const remaining = getTrialKeysPool().length;
 
         if (removed) {
+          updateStockDashboard(interaction.client).catch(() => {});
           return interaction.reply({
             content: `✅ **ลบ Key สำเร็จ!**\n> 🗑️ ลบ Key: \`${specificKey.trim()}\` ออกจากคลังแล้ว\n> 📦 คงเหลือในคลัง: **${remaining}** คีย์`,
             ephemeral: true
@@ -436,6 +446,7 @@ async function handleInteraction(interaction) {
       } else {
         // ล้างคลังทั้งหมด
         const deletedCount = clearAllTrialKeys();
+        updateStockDashboard(interaction.client).catch(() => {});
         return interaction.reply({
           content: `🗑️ **ล้างคลัง Key เรียบร้อยแล้ว!**\n> นำ Key ออกจากคลังทั้งหมด **${deletedCount}** คีย์ (ยอดคงเหลือปัจจุบัน: 0 คีย์)`,
           ephemeral: true
@@ -502,11 +513,55 @@ async function handleInteraction(interaction) {
 
       return interaction.reply(replyOptions);
     }
+
+    // คำสั่ง /setup-stock ส่งการ์ดสรุปคลัง Key ในห้องนี้ และตั้งเป็นห้องเติม Key อัตโนมัติ
+    if (commandName === 'setup-stock') {
+      const staffRoleId = process.env.STAFF_ROLE_ID;
+      const member = interaction.member;
+
+      const isStaff = member.permissions.has(PermissionFlagsBits.Administrator) ||
+        (staffRoleId && member.roles.cache.has(staffRoleId));
+
+      if (!isStaff) {
+        return interaction.reply({
+          content: '❌ เฉพาะแอดมินหรือทีมงานเท่านั้นที่สามารถใช้คำสั่งนี้ได้ครับ',
+          ephemeral: true
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const embed = buildStockEmbed();
+      const row = buildStockActionRow();
+      const stockMsg = await interaction.channel.send({
+        embeds: [embed],
+        components: [row]
+      });
+
+      saveStockConfig({
+        channelId: interaction.channel.id,
+        messageId: stockMsg.id
+      });
+
+      return interaction.editReply({
+        content: `✅ **ตั้งค่าห้องสต็อก Key สำเร็จเรียบร้อย!**\n` +
+          `> 📌 **ห้องสต็อก**: <#${interaction.channel.id}>\n` +
+          `> 📥 **การเติม Key**: แอดมินสามารถพิมพ์ Key ลงในห้องนี้ หรือแนบไฟล์ \`.txt\` ได้เลย บอทจะดึงเข้าคลังและอัปเดตการ์ดนี้ทันที\n` +
+          `> 🔄 **การตัดยอดอัตโนมัติ**: เมื่อมีคนกดรับ Key การ์ดด้านบนจะตัดคีย์ออกและบันทึกประวัติแบบ Real-time ทันที`
+      });
+    }
   }
 
   // 2. จัดการเมื่อกดปุ่ม (Buttons)
   if (interaction.isButton()) {
     const { customId, channel, user, guild } = interaction;
+
+    // ปุ่มรีเฟรชข้อมูลแดชบอร์ดสต็อก Key
+    if (customId === 'btn_stock_refresh') {
+      await interaction.deferUpdate();
+      await updateStockDashboard(interaction.client);
+      return;
+    }
 
     // ปุ่มกดรับ Key ทดลองใช้ฟรี (Button Trial Claim)
     if (customId === 'btn_claim_trial') {
@@ -869,6 +924,8 @@ async function handleTrialClaim(interaction) {
     .setColor('#2ECC71')
     .setFooter({ text: 'CookieRunX Auto-Farm System' })
     .setTimestamp();
+
+  updateStockDashboard(interaction.client).catch(() => {});
 
   return interaction.editReply({
     embeds: [successEmbed]

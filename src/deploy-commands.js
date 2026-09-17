@@ -119,6 +119,10 @@ const commands = [
   new SlashCommandBuilder()
     .setName('claimed-keys')
     .setDescription('📜 ดูรายชื่อสมาชิกที่เคยกดรับ Key ไปแล้ว พร้อม Key ที่ได้รับและเวลา (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  new SlashCommandBuilder()
+    .setName('setup-stock')
+    .setDescription('📦 ส่งการ์ดแดชบอร์ดสรุปคลัง Key ในห้องนี้ และตั้งเป็นห้องเติม Key อัตโนมัติ (เฉพาะแอดมิน)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ].map(command => command.toJSON());
 
