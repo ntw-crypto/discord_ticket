@@ -1011,6 +1011,16 @@ async function handleTrialClaim(interaction) {
     });
   }
 
+  // กรณีเกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets หรือยังไม่ได้ตั้งค่า
+  if (result.error || result.noSheetsConfig) {
+    const errorMsg = result.noSheetsConfig
+      ? '⚠️ **ยังไม่ได้เชื่อมต่อ Google Sheets บนเซิร์ฟเวอร์**\nกรุณาให้แอดมินพิมพ์คำสั่ง `/setup-sheets` หรือตั้งค่า Environment Variable `GOOGLE_SHEETS_URL` บน Render ครับ'
+      : `❌ **ไม่สามารถเชื่อมต่อกับ Google Sheets ได้:**\n\`${result.error}\`\n\n💡 *คำแนะนำ: กรุณาตรวจสอบว่าได้ทำการ Deploy เป็น New deployment (ใครก็ได้/Anyone) ใน Google Sheets หรือยังครับ*`;
+    return interaction.editReply({
+      content: errorMsg
+    });
+  }
+
   // กรณีคีย์ในคลังหมด
   if (result.outOfKeys) {
     const emptyEmbed = new EmbedBuilder()

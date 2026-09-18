@@ -38,7 +38,10 @@ function saveSheetsConfig(config) {
  */
 async function testSheetsConnection(url) {
   try {
-    const res = await fetch(url, {
+    const testUrl = new URL(url);
+    testUrl.searchParams.set('action', 'check');
+
+    const res = await fetch(testUrl.toString(), {
       method: 'GET',
       headers: {
         'Accept': 'application/json'
@@ -50,7 +53,14 @@ async function testSheetsConnection(url) {
       return { success: false, error: `HTTP ${res.status}: ไม่สามารถเชื่อมต่อกับ Web App ได้` };
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return { success: false, error: `Google Sheets ส่งข้อมูลกลับมาไม่ถูกต้อง (ไม่ใช่ JSON)` };
+    }
+
     if (data && data.success) {
       return { success: true, data };
     } else {
@@ -70,14 +80,18 @@ async function fetchSheetsStock() {
   if (!config || !config.webAppUrl) return null;
 
   try {
-    const res = await fetch(config.webAppUrl, {
+    const url = new URL(config.webAppUrl);
+    url.searchParams.set('action', 'check');
+
+    const res = await fetch(url.toString(), {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       redirect: 'follow'
     });
 
     if (!res.ok) return null;
-    const data = await res.json();
+    const text = await res.text();
+    const data = JSON.parse(text);
     if (data && data.success) {
       return data;
     }
@@ -100,24 +114,36 @@ async function claimKeyFromSheets(userId, username) {
   }
 
   try {
-    const res = await fetch(config.webAppUrl, {
-      method: 'POST',
+    const cleanId = String(userId).replace(/['\s\t]/g, '').trim();
+    const cleanUser = String(username || '').trim();
+
+    // เรียก Web App ผ่าน GET พร้อมส่ง query parameters
+    // รองรับ Google Apps Script Redirect 302 ได้อย่างสมบูรณ์แบบ ข้อมูลไม่สูญหาย
+    const url = new URL(config.webAppUrl);
+    url.searchParams.set('action', 'claim');
+    url.searchParams.set('userId', cleanId);
+    url.searchParams.set('username', cleanUser);
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8', // Google Apps Script handles text/plain without CORS preflight issues
+        'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        action: 'claim',
-        userId: String(userId),
-        username: String(username)
-      }),
       redirect: 'follow'
     });
 
     if (!res.ok) {
-      throw new Error(`Google Web App returned status ${res.status}`);
+      throw new Error(`Google Web App returned HTTP status ${res.status}`);
     }
 
-    const result = await res.json();
+    const text = await res.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Invalid JSON response from Google Sheets: ${text.slice(0, 150)}`);
+    }
+
     return result;
   } catch (err) {
     console.error('[GoogleSheets] Claim key error:', err.message);

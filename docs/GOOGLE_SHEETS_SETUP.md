@@ -34,8 +34,8 @@ function getSheet() {
   return ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
 }
 
-// ตรวจสอบสถานะและยอดคีย์คงเหลือ (GET)
-function doGet(e) {
+// ตรวจสอบสถานะและยอดคีย์คงเหลือ
+function handleCheck() {
   const sheet = getSheet();
   const data = sheet.getDataRange().getDisplayValues();
   
@@ -59,20 +59,17 @@ function doGet(e) {
     }
   }
 
-  const response = {
+  return createJsonResponse({
     success: true,
     total: total,
     available: available,
     claimed: claimed,
     availableKeys: availableKeys
-  };
-
-  return ContentService.createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON);
+  });
 }
 
-// ขอดึงคีย์และตัดยอดลงตาราง (POST)
-function doPost(e) {
+// ประมวลผลการขอรับสิทธิ์ Key และตัดยอดในตาราง
+function handleClaim(rawUserId, rawUsername) {
   const lock = LockService.getScriptLock();
   // ล็อกคิว 10 วินาที ป้องกันคนกดพร้อมกันแล้วได้คีย์ซ้ำ
   lock.waitLock(10000);
@@ -81,97 +78,116 @@ function doPost(e) {
     const sheet = getSheet();
     // ใช้ getDisplayValues เพื่อให้อ่านตัวเลข User ID เป็นข้อความแท้ 100% ไม่เพี้ยนเป็นตัวเลขชี้กำลัง (Scientific Notation)
     const displayData = sheet.getDataRange().getDisplayValues();
-    const params = JSON.parse(e.postData.contents || '{}');
-    const action = params.action || 'claim';
-    const cleanUserId = String(params.userId || '').replace(/['\s\t]/g, '').trim();
-    const username = String(params.username || '').trim();
+    const cleanUserId = String(rawUserId || '').replace(/['\s\t]/g, '').trim();
+    const username = String(rawUsername || '').trim();
 
-    if (action === 'check') {
-      return doGet(e);
+    if (!cleanUserId) {
+      return createJsonResponse({ success: false, error: 'User ID is required' });
     }
 
-    if (action === 'claim') {
-      if (!cleanUserId) {
-        return createJsonResponse({ success: false, error: 'User ID is required' });
-      }
+    // 1. ตรวจสอบ User ID ของคนกดรับกับ Google Sheets ว่าเคยรับไปแล้วหรือไม่
+    for (let i = 1; i < displayData.length; i++) {
+      const rowUserId = String(displayData[i][3] || '').replace(/['\s\t]/g, '').trim();
+      const rowUsername = String(displayData[i][2] || '').trim();
+      const rowKey = String(displayData[i][0] || '').trim();
 
-      // 1. ตรวจสอบ User ID ของคนกดรับกับ Google Sheets
-      for (let i = 1; i < displayData.length; i++) {
-        const rowUserId = String(displayData[i][3] || '').replace(/['\s\t]/g, '').trim();
-        const rowUsername = String(displayData[i][2] || '').trim();
-        const rowKey = String(displayData[i][0] || '').trim();
-
-        // ตรวจสอบว่าตรงกับ User ID ในคอลัมน์ D หรือคอลัมน์ C
-        if ((rowUserId && rowUserId === cleanUserId) || (rowUsername && rowUsername === cleanUserId)) {
-          return createJsonResponse({
-            success: false,
-            alreadyClaimed: true,
-            key: rowKey,
-            claimedAt: displayData[i][4] || 'ก่อนหน้านี้'
-          });
-        }
-      }
-
-      // 2. ค้นหา Key แรกที่ยังไม่ได้ถูกรับ
-      let targetRow = -1;
-      let assignedKey = '';
-
-      for (let i = 1; i < displayData.length; i++) {
-        const key = String(displayData[i][0] || '').trim();
-        const status = String(displayData[i][1] || '').trim().toLowerCase();
-
-        if (key && status !== 'claimed' && status !== 'ใช้แล้ว' && status !== 'รับแล้ว') {
-          targetRow = i + 1; // แปลง index เป็น row number (1-based)
-          assignedKey = key;
-          break;
-        }
-      }
-
-      // หากไม่พบคีย์ว่าง (คีย์หมด)
-      if (targetRow === -1 || !assignedKey) {
+      // ตรวจสอบว่าตรงกับ User ID ในคอลัมน์ D หรือคอลัมน์ C
+      if ((rowUserId && rowUserId === cleanUserId) || (rowUsername && rowUsername === cleanUserId)) {
         return createJsonResponse({
           success: false,
-          outOfKeys: true,
-          message: 'License keys in stock are exhausted'
+          alreadyClaimed: true,
+          key: rowKey,
+          claimedAt: displayData[i][4] || 'ก่อนหน้านี้'
         });
       }
+    }
 
-      // 3. บันทึกข้อมูลลงตารางแถวนั้นทันที
-      const now = new Date();
-      const timeString = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    // 2. ค้นหา Key แรกที่ยังไม่ได้ถูกรับ
+    let targetRow = -1;
+    let assignedKey = '';
 
-      sheet.getRange(targetRow, 2).setValue('Claimed'); // Column B: Status
-      sheet.getRange(targetRow, 3).setValue(username); // Column C: Claimed By
-      sheet.getRange(targetRow, 4).setNumberFormat('@'); // ตั้งค่าเซลล์เป็น Plain Text ป้องกันตัวเลขเพี้ยน
-      sheet.getRange(targetRow, 4).setValue(cleanUserId); // Column D: User ID
-      sheet.getRange(targetRow, 5).setValue(timeString); // Column E: Claimed Date
+    for (let i = 1; i < displayData.length; i++) {
+      const key = String(displayData[i][0] || '').trim();
+      const status = String(displayData[i][1] || '').trim().toLowerCase();
 
-      // คำนวณยอดคงเหลือ
-      let remaining = 0;
-      for (let i = 1; i < displayData.length; i++) {
-        if (i + 1 !== targetRow) {
-          const k = String(displayData[i][0] || '').trim();
-          const s = String(displayData[i][1] || '').trim().toLowerCase();
-          if (k && s !== 'claimed' && s !== 'ใช้แล้ว' && s !== 'รับแล้ว') {
-            remaining++;
-          }
-        }
+      if (key && status !== 'claimed' && status !== 'ใช้แล้ว' && status !== 'รับแล้ว') {
+        targetRow = i + 1; // แปลง index เป็น row number (1-based)
+        assignedKey = key;
+        break;
       }
+    }
 
+    // หากไม่พบคีย์ว่าง (คีย์หมด)
+    if (targetRow === -1 || !assignedKey) {
       return createJsonResponse({
-        success: true,
-        key: assignedKey,
-        remaining: remaining
+        success: false,
+        outOfKeys: true,
+        message: 'License keys in stock are exhausted'
       });
     }
 
-    return createJsonResponse({ success: false, error: 'Unknown action' });
+    // 3. บันทึกข้อมูลลงตารางแถวนั้นทันที
+    const now = new Date();
+    const timeString = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+    sheet.getRange(targetRow, 2).setValue('Claimed'); // Column B: Status
+    sheet.getRange(targetRow, 3).setValue(username); // Column C: Claimed By
+    sheet.getRange(targetRow, 4).setNumberFormat('@'); // ตั้งค่าเซลล์เป็น Plain Text ป้องกันตัวเลขเพี้ยน
+    sheet.getRange(targetRow, 4).setValue(cleanUserId); // Column D: User ID
+    sheet.getRange(targetRow, 5).setValue(timeString); // Column E: Claimed Date
+
+    // คำนวณยอดคงเหลือ
+    let remaining = 0;
+    for (let i = 1; i < displayData.length; i++) {
+      if (i + 1 !== targetRow) {
+        const k = String(displayData[i][0] || '').trim();
+        const s = String(displayData[i][1] || '').trim().toLowerCase();
+        if (k && s !== 'claimed' && s !== 'ใช้แล้ว' && s !== 'รับแล้ว') {
+          remaining++;
+        }
+      }
+    }
+
+    return createJsonResponse({
+      success: true,
+      key: assignedKey,
+      remaining: remaining
+    });
 
   } catch (err) {
     return createJsonResponse({ success: false, error: err.message });
   } finally {
     lock.releaseLock();
   }
+}
+
+// รองรับคำขอผ่าน GET (ทำงานร่วมกับการ Redirect ของ Google ได้ดีที่สุด)
+function doGet(e) {
+  const params = (e && e.parameter) ? e.parameter : {};
+  const action = params.action || 'check';
+  if (action === 'claim') {
+    return handleClaim(params.userId, params.username);
+  }
+  return handleCheck();
+}
+
+// รองรับคำขอผ่าน POST
+function doPost(e) {
+  let params = {};
+  try {
+    if (e && e.postData && e.postData.contents) {
+      params = JSON.parse(e.postData.contents);
+    }
+  } catch (err) {}
+
+  const action = params.action || (e && e.parameter && e.parameter.action) || 'claim';
+  const userId = params.userId || (e && e.parameter && e.parameter.userId);
+  const username = params.username || (e && e.parameter && e.parameter.username);
+
+  if (action === 'check') {
+    return handleCheck();
+  }
+  return handleClaim(userId, username);
 }
 
 function createJsonResponse(data) {

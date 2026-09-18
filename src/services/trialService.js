@@ -120,12 +120,22 @@ async function claimTrialKey(userId, username) {
       };
     }
 
+    // ถ้า Google Sheets ส่ง error หรือผลลัพธ์ไม่ถูกต้อง ให้แจ้ง error ตรงๆ ห้าม fall through ไปแจ้งว่าคีย์หมด
     if (sheetsResult.error) {
       console.warn('[GoogleSheets] เกิดข้อผิดพลาดในการดึงคีย์จากชีต:', sheetsResult.error);
+      return {
+        success: false,
+        error: sheetsResult.error
+      };
     }
+
+    return {
+      success: false,
+      error: sheetsResult.message || 'Google Sheets ส่งผลลัพธ์ไม่ถูกต้อง หรือยังไม่ได้อัปเดตเวอร์ชันใน Apps Script'
+    };
   }
 
-  // 2. ถ้าไม่ได้ตั้งค่า Google Sheets หรือเชื่อมต่อไม่ได้ ให้ตรวจสอบจากคลังภายในเครื่อง
+  // 2. ถ้าไม่ได้ตั้งค่า Google Sheets ให้ตรวจสอบจากคลังภายในเครื่อง
   const claimed = getClaimedUsers();
   if (claimed[userId]) {
     return {
@@ -138,9 +148,10 @@ async function claimTrialKey(userId, username) {
 
   const pool = getTrialKeysPool();
   if (pool.length === 0) {
-    // หากคีย์หมด จะไม่สุ่มสร้างคีย์ปลอม แต่แจ้งเตือนคีย์หมดตามที่ตกลง
+    // หากไม่ได้ตั้งค่า Google Sheets และคลังในเครื่องว่างเปล่า ให้แจ้งให้ชัดเจน
     return {
       success: false,
+      noSheetsConfig: true,
       outOfKeys: true
     };
   }
