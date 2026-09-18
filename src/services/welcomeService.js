@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { AttachmentBuilder } = require('discord.js');
+const { generateWelcomeCard } = require('./canvasWelcomeService');
 
 const dataDir = path.join(__dirname, '../../data');
 const welcomeConfigPath = path.join(dataDir, 'welcome_config.json');
@@ -76,7 +78,7 @@ async function handleMemberJoin(member) {
     }
   }
 
-  // 2. ส่งข้อความแจ้งเตือนคนเข้า
+  // 2. ส่งข้อความแจ้งเตือนคนเข้าพร้อมรูปการ์ดต้อนรับ
   if (config.joinChannelId) {
     try {
       const channel = member.guild.channels.cache.get(config.joinChannelId) ||
@@ -85,9 +87,21 @@ async function handleMemberJoin(member) {
       if (channel && channel.isTextBased()) {
         const username = member.user?.username || member.displayName || 'สมาชิกใหม่';
         const memberCount = member.guild.memberCount;
-        const messageText = `🎉 ยินดีต้อนรับ <@${member.id}> (\`${username}\`) เข้าสู่เซิร์ฟเวอร์! (สมาชิกลำดับที่ #${memberCount})`;
-        
-        await channel.send({ content: messageText });
+        const messageText = `🎉 ยินดีต้อนรับ <@${member.id}> เข้าสู่เซิร์ฟเวอร์!`;
+
+        try {
+          const imageBuffer = await generateWelcomeCard(member);
+          const attachment = new AttachmentBuilder(imageBuffer, { name: 'welcome-card.png' });
+
+          await channel.send({
+            content: messageText,
+            files: [attachment]
+          });
+        } catch (imgErr) {
+          console.error('[WelcomeCard] ไม่สามารถสร้างรูปภาพการ์ดได้ ใช้ข้อความสำรองแทน:', imgErr.message);
+          const fallbackText = `🎉 ยินดีต้อนรับ <@${member.id}> (\`${username}\`) เข้าสู่เซิร์ฟเวอร์! (สมาชิกลำดับที่ #${memberCount})`;
+          await channel.send({ content: fallbackText });
+        }
       }
     } catch (msgErr) {
       console.error('[Welcome] ❌ ส่งข้อความคนเข้าไม่สำเร็จ:', msgErr.message);
