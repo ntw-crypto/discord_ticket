@@ -144,6 +144,15 @@ const commands = [
       option.setName('auto-role')
         .setDescription('ยศเริ่มต้นที่จะแจกให้สมาชิกใหม่อัตโนมัติ (ไม่ระบุก็ได้)')
         .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('setup-sheets')
+    .setDescription('📊 เชื่อมต่อคลัง Key กับ Google Sheets Web App (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(option =>
+      option.setName('url')
+        .setDescription('URL ของ Google Apps Script Web App (https://script.google.com/macros/s/.../exec)')
+        .setRequired(true)
     )
 ].map(command => command.toJSON());
 

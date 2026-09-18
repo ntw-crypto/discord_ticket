@@ -27,6 +27,7 @@ const {
   updateStockDashboard 
 } = require('../services/stockService');
 const { saveWelcomeConfig } = require('../services/welcomeService');
+const { saveSheetsConfig, testSheetsConnection } = require('../services/sheetsService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -532,7 +533,7 @@ async function handleInteraction(interaction) {
 
       await interaction.deferReply({ ephemeral: true });
 
-      const embed = buildStockEmbed();
+      const embed = await buildStockEmbed();
       const row = buildStockActionRow();
       const stockMsg = await interaction.channel.send({
         embeds: [embed],
@@ -583,6 +584,49 @@ async function handleInteraction(interaction) {
           `> 📤 **ห้องแจ้งเตือนคนออก**: <#${leaveChannel.id}>\n` +
           `> 👑 **ยศเริ่มต้น (Auto-Role)**: ${autoRoleText}\n\n` +
           `💡 *หมายเหตุ: หากมีการตั้งค่ายศเริ่มต้น กรุณาตรวจสอบให้แน่ใจว่ายศของบอทอยู่ในลำดับที่สูงกว่ายศที่ต้องการแจกใน Server Settings เพื่อให้บอทมีสิทธิ์มอบยศได้ครับ*`
+      });
+    }
+
+    // คำสั่ง /setup-sheets เชื่อมต่อคลัง Key กับ Google Sheets Web App
+    if (commandName === 'setup-sheets') {
+      const member = interaction.member;
+      const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+      if (!isAdmin) {
+        return interaction.reply({
+          content: '❌ เฉพาะผู้ดูแลระบบ (Administrator) เท่านั้นที่สามารถใช้คำสั่งนี้ได้ครับ',
+          ephemeral: true
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const rawUrl = interaction.options.getString('url').trim();
+
+      if (!rawUrl.startsWith('https://script.google.com/macros/s/')) {
+        return interaction.editReply({
+          content: '❌ **URL ไม่ถูกต้อง!** กรุณาใช้ URL ที่ได้จากการ Deploy Web App ของ Google Apps Script (ขึ้นต้นด้วย `https://script.google.com/macros/s/...`)'
+        });
+      }
+
+      // ทดสอบการเชื่อมต่อกับ Google Sheets ทันที
+      const testResult = await testSheetsConnection(rawUrl);
+
+      if (!testResult.success) {
+        return interaction.editReply({
+          content: `❌ **เชื่อมต่อกับ Google Sheets ไม่สำเร็จ!**\n> ⚠️ เกิดข้อผิดพลาด: \`${testResult.error}\`\n\n💡 *คำแนะนำ: กรุณาตรวจสอบว่าตอน Deploy ใน Apps Script ได้เลือก "ผู้มีสิทธิ์เข้าถึง (Who has access): ทุกคน (Anyone)" หรือยัง*`
+        });
+      }
+
+      saveSheetsConfig({ webAppUrl: rawUrl });
+      updateStockDashboard(interaction.client).catch(() => {});
+
+      const info = testResult.data || {};
+      return interaction.editReply({
+        content: `🎉 **เชื่อมต่อ Google Sheets สำเร็จเรียบร้อย!**\n\n` +
+          `> 🟢 **สถานะ**: เชื่อมต่อสำเร็จ พร้อมซิงค์ข้อมูล Real-time\n` +
+          `> 🔑 **Key ที่พร้อมแจกในชีต**: \`${info.available ?? 0}\` คีย์\n` +
+          `> 👥 **ยอดที่แจกไปแล้ว**: \`${info.claimed ?? 0}\` คน (จากทั้งหมด ${info.total ?? 0} คีย์)\n\n` +
+          `✨ *ตอนนี้คุณสามารถเปิด Google Sheets บนมือถือหรือคอมพิวเตอร์เพื่อเพิ่ม/ลบ/แก้ไขคีย์ได้ตลอดเวลาแล้วครับ! เมื่อมีคนกดรับคีย์ใน Discord ระบบจะตัดยอดและบันทึกชื่อคนรับลงในชีตให้อัตโนมัติทันที*`
       });
     }
   }
@@ -922,11 +966,13 @@ async function handleTrialClaim(interaction) {
   }
 
   const user = interaction.user;
-  const result = claimTrialKey(user.id, user.tag || user.username);
+  const result = await claimTrialKey(user.id, user.tag || user.username);
 
   // กรณีเคยรับไปแล้ว
   if (result.alreadyClaimed) {
-    const claimedDate = new Date(result.claimedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+    const claimedDate = result.claimedAt 
+      ? new Date(result.claimedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
+      : 'ในระบบก่อนหน้านี้';
     const alreadyEmbed = new EmbedBuilder()
       .setTitle('⚠️ คุณเคยใช้สิทธิ์ทดลองใช้ฟรีไปแล้ว')
       .setDescription(
@@ -940,6 +986,30 @@ async function handleTrialClaim(interaction) {
 
     return interaction.editReply({
       embeds: [alreadyEmbed]
+    });
+  }
+
+  // กรณีคีย์ในคลังหมด
+  if (result.outOfKeys) {
+    const emptyEmbed = new EmbedBuilder()
+      .setTitle('⚠️ License Key ในคลังหมดชั่วคราว')
+      .setDescription(
+        `ขณะนี้ License Key ทดลองใช้ฟรีในคลังหมดชั่วคราวครับ 🥺\n\n` +
+        `> 🔔 **สถานะ**: ทีมงานกำลังเร่งเติม Key เข้าสู่ระบบอย่างต่อเนื่อง\n` +
+        `> 💬 **คำแนะนำ**: กรุณากดลองใหม่อีกครั้งในภายหลัง หรือเปิด Ticket ติดต่อทีมงานได้เลยครับ`
+      )
+      .setColor('#E67E22')
+      .setFooter({ text: 'CookieRunX Trial System' });
+
+    return interaction.editReply({
+      embeds: [emptyEmbed]
+    });
+  }
+
+  // กรณีเกิดข้อผิดพลาดอื่นๆ
+  if (!result.success || !result.key) {
+    return interaction.editReply({
+      content: '❌ เกิดข้อผิดพลาดในการเชื่อมต่อคลัง Key กรุณาลองใหม่อีกครั้ง หรือติดต่อทีมงานครับ'
     });
   }
 

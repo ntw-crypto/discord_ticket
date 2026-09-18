@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { getSheetsConfig, claimKeyFromSheets, fetchSheetsStock } = require('./sheetsService');
 
 const dataDir = path.join(__dirname, '../../data');
 const trialsFilePath = path.join(dataDir, 'trials.json');
@@ -44,15 +45,7 @@ function saveTrialKeysPool(keys) {
   fs.writeFileSync(keysPoolFilePath, JSON.stringify(keys, null, 2), 'utf-8');
 }
 
-// สุ่มสร้าง Key สำรอง (เช่น CKRX-FREE-XXXX-XXXX)
-function generateRandomKey() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const seg1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  const seg2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `CKRX-TRIAL-${seg1}-${seg2}`;
-}
-
-// เพิ่ม Key เข้าคลัง (สำหรับแอดมิน)
+// เพิ่ม Key เข้าคลังในระบบ
 function addKeysToPool(newKeys) {
   const currentPool = getTrialKeysPool();
   const updated = [...currentPool, ...newKeys];
@@ -60,7 +53,7 @@ function addKeysToPool(newKeys) {
   return updated.length;
 }
 
-// ล้าง Key ทั้งหมดในคลัง
+// ล้าง Key ทั้งหมดในคลังระบบ
 function clearAllTrialKeys() {
   const currentPool = getTrialKeysPool();
   const deletedCount = currentPool.length;
@@ -80,11 +73,60 @@ function removeSpecificKey(keyToRemove) {
   return false;
 }
 
-// ขอดึง Key แจกให้ผู้ใช้
-function claimTrialKey(userId, username) {
+/**
+ * ขอดึง Key แจกให้ผู้ใช้ (รองรับทั้ง Google Sheets แบบ Real-time และ Local Pool)
+ * @param {string} userId 
+ * @param {string} username 
+ * @returns {Promise<object>}
+ */
+async function claimTrialKey(userId, username) {
+  const sheetsConfig = getSheetsConfig();
+
+  // 1. ถ้ามีการตั้งค่า Google Sheets ให้ดึงและตัดยอดใน Google Sheets เป็นหลัก
+  if (sheetsConfig && sheetsConfig.webAppUrl) {
+    const sheetsResult = await claimKeyFromSheets(userId, username);
+
+    if (sheetsResult.alreadyClaimed) {
+      return {
+        success: false,
+        alreadyClaimed: true,
+        claimedAt: sheetsResult.claimedAt,
+        key: sheetsResult.key
+      };
+    }
+
+    if (sheetsResult.outOfKeys) {
+      return {
+        success: false,
+        outOfKeys: true
+      };
+    }
+
+    if (sheetsResult.success && sheetsResult.key) {
+      // บันทึกสำเนาลง trials.json ภายในระบบด้วย
+      const claimed = getClaimedUsers();
+      claimed[userId] = {
+        username: username,
+        key: sheetsResult.key,
+        claimedAt: new Date().toISOString()
+      };
+      saveClaimedUsers(claimed);
+
+      return {
+        success: true,
+        key: sheetsResult.key,
+        remainingInPool: sheetsResult.remaining,
+        fromGoogleSheets: true
+      };
+    }
+
+    if (sheetsResult.error) {
+      console.warn('[GoogleSheets] เกิดข้อผิดพลาดในการดึงคีย์จากชีต:', sheetsResult.error);
+    }
+  }
+
+  // 2. ถ้าไม่ได้ตั้งค่า Google Sheets หรือเชื่อมต่อไม่ได้ ให้ตรวจสอบจากคลังภายในเครื่อง
   const claimed = getClaimedUsers();
-  
-  // ตรวจสอบว่าเคยรับสิทธิ์ไปแล้วหรือไม่
   if (claimed[userId]) {
     return {
       success: false,
@@ -95,18 +137,17 @@ function claimTrialKey(userId, username) {
   }
 
   const pool = getTrialKeysPool();
-  let assignedKey = '';
-
-  if (pool.length > 0) {
-    // ถ้ามี Key ในคลังที่แอดมินใส่ไว้ ให้หยิบมา 1 คีย์
-    assignedKey = pool.shift();
-    saveTrialKeysPool(pool);
-  } else {
-    // ถ้าไม่มี Key ในคลัง ให้สุ่มสร้างคีย์รูปแบบ CKRX-TRIAL-XXXX-XXXX อัตโนมัติ
-    assignedKey = generateRandomKey();
+  if (pool.length === 0) {
+    // หากคีย์หมด จะไม่สุ่มสร้างคีย์ปลอม แต่แจ้งเตือนคีย์หมดตามที่ตกลง
+    return {
+      success: false,
+      outOfKeys: true
+    };
   }
 
-  // บันทึกประวัติว่าผู้ใช้นี้รับไปแล้ว
+  const assignedKey = pool.shift();
+  saveTrialKeysPool(pool);
+
   claimed[userId] = {
     username: username,
     key: assignedKey,
