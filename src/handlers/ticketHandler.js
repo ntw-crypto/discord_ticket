@@ -11,7 +11,7 @@ const {
 } = require('discord.js');
 const discordTranscripts = require('discord-html-transcripts');
 const config = require('../../config.json');
-const { claimTrialKey } = require('../services/trialService');
+const { claimTrialKey, getTrialConfig, saveTrialConfig } = require('../services/trialService');
 const { getNextTicketChannelName } = require('../services/ticketCounterService');
 const { 
   buildStockEmbed, 
@@ -177,12 +177,25 @@ async function handleInteraction(interaction) {
     if (commandName === 'setup-trial') {
       await interaction.deferReply({ ephemeral: true });
 
+      const requiredRole = interaction.options.getRole('required-role');
+
+      // บันทึกการตั้งค่ายศที่จำเป็น
+      saveTrialConfig({
+        requiredRoleId: requiredRole ? requiredRole.id : null
+      });
+
+      let roleConditionText = '';
+      if (requiredRole) {
+        roleConditionText = `> 🎖️ **เงื่อนไขสิทธิ์**: ต้องมียศ <@&${requiredRole.id}> จึงจะกดรับได้\n`;
+      }
+
       const trialEmbed = new EmbedBuilder()
         .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 7 วัน!')
         .setDescription(
           `สัมผัสประสบการณ์ฟาร์มอัตโนมัติ ปล่อยบอทเล่นให้ 24 ชม.\n` +
           `> ✨ **สิทธิ์การใช้งาน**: ทดลองใช้ฟรี 7 วันเต็ม\n` +
           `> ⚡ **เงื่อนไข**: จำกัด 1 สิทธิ์ ต่อ 1 บัญชี Discord เท่านั้น\n` +
+          roleConditionText +
           `> 🛡️ **ความปลอดภัย**: ปลอดภัย ไม่โดนแบน (Safe & Undetected)\n\n` +
           `กดปุ่ม **"🎁 รับ Key ทดลองใช้ฟรี 7 วัน"** ด้านล่างเพื่อรับคีย์ทันที!`
         )
@@ -190,9 +203,11 @@ async function handleInteraction(interaction) {
         .setFooter({ text: 'CookieRunX Auto-Bot Trial System' })
         .setTimestamp();
 
+      const customId = requiredRole ? `btn_claim_trial:${requiredRole.id}` : 'btn_claim_trial';
+
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId('btn_claim_trial')
+          .setCustomId(customId)
           .setLabel('รับ Key ทดลองใช้ฟรี 7 วัน')
           .setEmoji('🎁')
           .setStyle(ButtonStyle.Success)
@@ -203,8 +218,12 @@ async function handleInteraction(interaction) {
         components: [row]
       });
 
+      const replyMsg = requiredRole
+        ? `✅ ส่งการ์ดแจก Key ทดลองใช้ฟรีเรียบร้อยแล้ว! (จำกัดเฉพาะผู้มียศ <@&${requiredRole.id}>)`
+        : '✅ ส่งการ์ดแจก Key ทดลองใช้ฟรีเรียบร้อยแล้ว! (ทุกคนสามารถกดรับได้)';
+
       return interaction.editReply({
-        content: '✅ ส่งการ์ดแจก Key ทดลองใช้ฟรีเรียบร้อยแล้ว!'
+        content: replyMsg
       });
     }
 
@@ -423,8 +442,9 @@ async function handleInteraction(interaction) {
     }
 
     // ปุ่มกดรับ Key ทดลองใช้ฟรี (Button Trial Claim)
-    if (customId === 'btn_claim_trial') {
-      return handleTrialClaim(interaction);
+    if (customId.startsWith('btn_claim_trial')) {
+      const specificRoleId = customId.includes(':') ? customId.split(':')[1] : null;
+      return handleTrialClaim(interaction, specificRoleId);
     }
 
     // ปุ่มกดรับยศอัตโนมัติ (ห้ามถอดยศเอง)
@@ -739,10 +759,36 @@ async function askCloseConfirmation(interaction) {
 }
 
 // ฟังก์ชันประมวลผลการขอรับ Key ทดลองใช้ฟรี
-async function handleTrialClaim(interaction) {
+async function handleTrialClaim(interaction, specificRoleId = null) {
   // รับทราบคำสั่งทันที ป้องกัน Interaction Timeout 3 วินาทีของ Discord
   if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply({ ephemeral: true });
+  }
+
+  // ตรวจสอบเงื่อนไขยศที่กำหนด (ถ้ามี)
+  const trialConfig = getTrialConfig();
+  const requiredRoleId = specificRoleId || trialConfig.requiredRoleId;
+
+  if (requiredRoleId) {
+    const member = interaction.member;
+    const hasRole = member?.roles?.cache 
+      ? member.roles.cache.has(requiredRoleId) 
+      : (Array.isArray(member?.roles) && member.roles.includes(requiredRoleId));
+
+    if (!hasRole) {
+      const noRoleEmbed = new EmbedBuilder()
+        .setTitle('⛔ คุณไม่มีสิทธิ์กดรับ Key นี้')
+        .setDescription(
+          `ขออภัยครับ การกดรับ License Key ทดลองใช้ฟรีนี้ **สงวนสิทธิ์เฉพาะสมาชิกที่มียศ** <@&${requiredRoleId}> **เท่านั้น!**\n\n` +
+          `> 💡 **คำแนะนำ**: กรุณากดรับยศที่กำหนดให้เรียบร้อยก่อน หรือติดต่อทีมงานผ่านการเปิด Ticket ครับ`
+        )
+        .setColor('#E74C3C')
+        .setFooter({ text: 'CookieRunX Role Protection' });
+
+      return interaction.editReply({
+        embeds: [noRoleEmbed]
+      });
+    }
   }
 
   const user = interaction.user;

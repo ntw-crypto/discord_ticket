@@ -6,9 +6,31 @@ const dataDir = path.join(__dirname, '../../data');
 const trialsFilePath = path.join(dataDir, 'trials.json');
 const keysPoolFilePath = path.join(dataDir, 'trial_keys.json');
 
+const trialConfigPath = path.join(dataDir, 'trial_config.json');
+
 // ตรวจสอบและสร้างโฟลเดอร์ data
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
+}
+
+function getTrialConfig() {
+  try {
+    if (fs.existsSync(trialConfigPath)) {
+      return JSON.parse(fs.readFileSync(trialConfigPath, 'utf-8'));
+    }
+  } catch (e) {}
+  if (process.env.TRIAL_REQUIRED_ROLE_ID) {
+    return { requiredRoleId: process.env.TRIAL_REQUIRED_ROLE_ID };
+  }
+  return {};
+}
+
+function saveTrialConfig(config) {
+  try {
+    fs.writeFileSync(trialConfigPath, JSON.stringify(config, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving trial_config.json:', e);
+  }
 }
 
 // ตรวจสอบและสร้างไฟล์ trials.json (บันทึกคนเคยกดรับ)
@@ -179,5 +201,7 @@ module.exports = {
   clearAllTrialKeys,
   removeSpecificKey,
   getTrialKeysPool,
-  getClaimedUsers
+  getClaimedUsers,
+  getTrialConfig,
+  saveTrialConfig
 };

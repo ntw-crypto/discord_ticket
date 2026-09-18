@@ -65,7 +65,12 @@ const commands = [
   new SlashCommandBuilder()
     .setName('setup-trial')
     .setDescription('ส่งการ์ดปุ่มกดรับ Key ทดลองใช้ฟรีเข้าห้องนี้ (เฉพาะแอดมิน)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addRoleOption(option =>
+      option.setName('required-role')
+        .setDescription('กำหนดยศที่ต้องมีถึงจะกดรับ Key ได้ (หากไม่ระบุ ใครก็กดรับได้)')
+        .setRequired(false)
+    ),
   new SlashCommandBuilder()
     .setName('broadcast')
     .setDescription('📢 ส่งข้อความประกาศหาลูกค้า/สมาชิกทุกคนทาง DM (เฉพาะแอดมิน)')
