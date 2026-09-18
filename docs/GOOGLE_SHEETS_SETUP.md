@@ -130,11 +130,9 @@ function handleClaim(rawUserId, rawUsername) {
     const now = new Date();
     const timeString = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 
-    sheet.getRange(targetRow, 2).setValue('Claimed'); // Column B: Status
-    sheet.getRange(targetRow, 3).setValue(username); // Column C: Claimed By
-    sheet.getRange(targetRow, 4).setNumberFormat('@'); // ตั้งค่าเซลล์เป็น Plain Text ป้องกันตัวเลขเพี้ยน
-    sheet.getRange(targetRow, 4).setValue(cleanUserId); // Column D: User ID
-    sheet.getRange(targetRow, 5).setValue(timeString); // Column E: Claimed Date
+    // บันทึกข้อมูลลงตารางแถวนั้นทันทีแบบ Batch (รวดเร็วและประหยัดเวลา)
+    sheet.getRange(targetRow, 4).setNumberFormat('@'); // Column D: ตั้งค่าเป็น Plain Text ป้องกันตัวเลข User ID เพี้ยน
+    sheet.getRange(targetRow, 2, 1, 4).setValues([['Claimed', username, cleanUserId, timeString]]); // บันทึกพร้อมกัน 4 คอลัมน์ (B ถึง E) ใน 1 คำสั่ง
 
     // คำนวณยอดคงเหลือ
     let remaining = 0;
