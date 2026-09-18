@@ -43,7 +43,22 @@ function roundRect(ctx, x, y, width, height, radius) {
 }
 
 /**
- * สร้างรูปภาพการ์ดต้อนรับสมาชิกใหม่ (1024x450 px) ในสไตล์ Dark Modern Luxury & Gold
+ * วาดรูปทรงหกเหลี่ยม (Hexagon) สไตล์ Cyber Shield
+ */
+function drawHexagon(ctx, x, y, radius) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const hx = x + radius * Math.cos(angle);
+    const hy = y + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(hx, hy);
+    else ctx.lineTo(hx, hy);
+  }
+  ctx.closePath();
+}
+
+/**
+ * สร้างรูปภาพการ์ดต้อนรับสมาชิกใหม่ (1024x450 px) สไตล์ Cyber Sci-Fi HUD ล้ำยุค
  * @param {import('discord.js').GuildMember} member 
  * @returns {Promise<Buffer>}
  */
@@ -57,60 +72,153 @@ async function generateWelcomeCard(member) {
   const username = member.user?.username || member.displayName || 'สมาชิกใหม่';
   const memberCount = member.guild?.memberCount || 1;
 
-  // 1. พื้นหลังหลัก (Dark Premium Obsidian)
+  // 1. พื้นหลังหลัก (Deep Space Sci-Fi Dark)
   const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-  bgGrad.addColorStop(0, '#0c0d12');
-  bgGrad.addColorStop(0.5, '#13151e');
-  bgGrad.addColorStop(1, '#090a0e');
+  bgGrad.addColorStop(0, '#06070b');
+  bgGrad.addColorStop(0.5, '#0b0f19');
+  bgGrad.addColorStop(1, '#080a11');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
 
-  // 2. แสงนีออนโกลว์สีทอง (Ambient Golden Glow)
-  // Glow รอบ Avatar
-  const avatarGlow = ctx.createRadialGradient(180, 225, 40, 180, 225, 260);
-  avatarGlow.addColorStop(0, 'rgba(212, 175, 55, 0.25)');
-  avatarGlow.addColorStop(0.6, 'rgba(212, 175, 55, 0.08)');
-  avatarGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = avatarGlow;
+  // 2. แสงนีออน Cyber Glow ในบรรยากาศ (Ambient Glow)
+  // Glow นีออน Cyan รอบ Avatar
+  const cyanGlow = ctx.createRadialGradient(180, 225, 30, 180, 225, 270);
+  cyanGlow.addColorStop(0, 'rgba(0, 242, 254, 0.28)');
+  cyanGlow.addColorStop(0.5, 'rgba(0, 242, 254, 0.08)');
+  cyanGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = cyanGlow;
   ctx.fillRect(0, 0, width, height);
 
-  // Glow มุมขวาบน
-  const topGlow = ctx.createRadialGradient(900, 50, 20, 900, 50, 300);
-  topGlow.addColorStop(0, 'rgba(245, 200, 66, 0.15)');
-  topGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = topGlow;
+  // Glow นีออน Purple ด้านบนขวา
+  const purpleGlow = ctx.createRadialGradient(900, 60, 20, 900, 60, 320);
+  purpleGlow.addColorStop(0, 'rgba(184, 39, 252, 0.22)');
+  purpleGlow.addColorStop(0.6, 'rgba(127, 0, 255, 0.06)');
+  purpleGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = purpleGlow;
   ctx.fillRect(0, 0, width, height);
 
-  // 3. วาดลายเส้นประดับเรขาคณิต (Geometric Tech & Luxury Lines)
+  // 3. วาดตารางเรขาคณิตไซเบอร์ (Cyber Tech Grid & Circuits)
   ctx.save();
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.12)';
-  ctx.lineWidth = 1.5;
-  for (let i = -100; i < width + 200; i += 80) {
+  ctx.strokeStyle = 'rgba(0, 242, 254, 0.06)';
+  ctx.lineWidth = 1;
+  // เส้นแนวตั้ง
+  for (let x = 40; x < width; x += 50) {
     ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i - 120, height);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
     ctx.stroke();
+  }
+  // เส้นแนวนอน
+  for (let y = 30; y < height; y += 50) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // วาดลายวงจร Tech Circuit เส้นเฉียง 45 องศา
+  ctx.strokeStyle = 'rgba(184, 39, 252, 0.15)';
+  ctx.lineWidth = 1.5;
+  const circuits = [
+    { x1: 50, y1: 400, x2: 120, y2: 330, x3: 200, y3: 330 },
+    { x1: 750, y1: 40, x2: 830, y2: 120, x3: 980, y3: 120 },
+    { x1: 850, y1: 400, x2: 920, y2: 330, x3: 990, y3: 330 }
+  ];
+  for (const c of circuits) {
+    ctx.beginPath();
+    ctx.moveTo(c.x1, c.y1);
+    ctx.lineTo(c.x2, c.y2);
+    ctx.lineTo(c.x3, c.y3);
+    ctx.stroke();
+
+    // จุดโหนดกลมที่ปลายวงจร
+    ctx.fillStyle = '#00f2fe';
+    ctx.beginPath();
+    ctx.arc(c.x3, c.y3, 3, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.restore();
 
-  // 4. กรอบการ์ดชั้นนอกสุด (Card Border with Gold Gradient)
+  // 4. กรอบการ์ดสไตล์ Sci-Fi HUD (Cyber Chamfered Card Frame)
   ctx.save();
   const borderGrad = ctx.createLinearGradient(0, 0, width, height);
-  borderGrad.addColorStop(0, '#e5b94c');
-  borderGrad.addColorStop(0.3, 'rgba(212, 175, 55, 0.4)');
-  borderGrad.addColorStop(0.7, 'rgba(243, 229, 171, 0.7)');
-  borderGrad.addColorStop(1, '#9e7d23');
+  borderGrad.addColorStop(0, '#00f2fe');
+  borderGrad.addColorStop(0.3, 'rgba(79, 172, 254, 0.4)');
+  borderGrad.addColorStop(0.7, 'rgba(184, 39, 252, 0.5)');
+  borderGrad.addColorStop(1, '#b827fc');
   ctx.strokeStyle = borderGrad;
-  ctx.lineWidth = 4;
-  roundRect(ctx, 16, 16, width - 32, height - 32, 24);
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = 'rgba(0, 242, 254, 0.4)';
+  ctx.shadowBlur = 12;
+  roundRect(ctx, 16, 16, width - 32, height - 32, 22);
+  ctx.stroke();
+
+  // มุมตัดฉากตกแต่งสไตล์ HUD (Corner HUD Brackets)
+  ctx.strokeStyle = '#00f2fe';
+  ctx.lineWidth = 3.5;
+  // มุมซ้ายบน
+  ctx.beginPath();
+  ctx.moveTo(16, 60);
+  ctx.lineTo(16, 16);
+  ctx.lineTo(60, 16);
+  ctx.stroke();
+  // มุมขวาล่าง
+  ctx.beginPath();
+  ctx.moveTo(width - 16, height - 60);
+  ctx.lineTo(width - 16, height - 16);
+  ctx.lineTo(width - 60, height - 16);
   ctx.stroke();
   ctx.restore();
 
-  // 5. โหลดและวาดรูป Avatar
+  // 5. รูปโปรไฟล์ทรงหกเหลี่ยมไฮเทค (Hexagon Cyber Shield)
   const avatarX = 180;
   const avatarY = 225;
-  const avatarRadius = 90;
+  const avatarRadius = 92;
 
+  // 5.1 วงแหวนเรดาร์ HUD ด้านนอกสุด (HUD Radar Scanner Ring)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 242, 254, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(avatarX, avatarY, avatarRadius + 22, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // เส้นสแกนเรดาร์ประดับ (HUD Arcs)
+  ctx.strokeStyle = '#00f2fe';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#00f2fe';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(avatarX, avatarY, avatarRadius + 22, -Math.PI / 4, Math.PI / 6);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(avatarX, avatarY, avatarRadius + 22, (3 * Math.PI) / 4, (7 * Math.PI) / 6);
+  ctx.stroke();
+
+  // มาร์กเกอร์เป้าเล็ง HUD (Reticle Ticks)
+  ctx.fillStyle = '#b827fc';
+  ctx.fillRect(avatarX - 2, avatarY - avatarRadius - 28, 4, 8);
+  ctx.fillRect(avatarX - 2, avatarY + avatarRadius + 20, 4, 8);
+  ctx.fillRect(avatarX - avatarRadius - 28, avatarY - 2, 8, 4);
+  ctx.fillRect(avatarX + avatarRadius + 20, avatarY - 2, 8, 4);
+  ctx.restore();
+
+  // 5.2 กรอบหกเหลี่ยมนีออนชั้นนอก (Outer Glowing Hexagon)
+  ctx.save();
+  const hexGrad = ctx.createLinearGradient(avatarX - avatarRadius, avatarY - avatarRadius, avatarX + avatarRadius, avatarY + avatarRadius);
+  hexGrad.addColorStop(0, '#00f2fe');
+  hexGrad.addColorStop(0.5, '#4facfe');
+  hexGrad.addColorStop(1, '#b827fc');
+
+  ctx.strokeStyle = hexGrad;
+  ctx.lineWidth = 5;
+  ctx.shadowColor = '#00f2fe';
+  ctx.shadowBlur = 24;
+  drawHexagon(ctx, avatarX, avatarY, avatarRadius + 4);
+  ctx.stroke();
+  ctx.restore();
+
+  // 5.3 โหลดรูป Avatar
   let avatarImg = null;
   try {
     const avatarURL = member.user?.displayAvatarURL({ extension: 'png', size: 256, forceStatic: true }) ||
@@ -119,133 +227,126 @@ async function generateWelcomeCard(member) {
       avatarImg = await loadImage(avatarURL);
     }
   } catch (err) {
-    console.warn('[WelcomeCard] Failed to load user avatar, using fallback:', err.message);
+    console.warn('[WelcomeCard] Failed to load avatar:', err.message);
   }
 
-  // วาดวงแหวนด้านหลัง Avatar
+  // 5.4 ตัดรูป Avatar เป็นทรงหกเหลี่ยม
   ctx.save();
-  const ringGrad = ctx.createLinearGradient(avatarX - avatarRadius, avatarY - avatarRadius, avatarX + avatarRadius, avatarY + avatarRadius);
-  ringGrad.addColorStop(0, '#ffe885');
-  ringGrad.addColorStop(0.5, '#d4af37');
-  ringGrad.addColorStop(1, '#8c6d1f');
-
-  ctx.beginPath();
-  ctx.arc(avatarX, avatarY, avatarRadius + 8, 0, Math.PI * 2);
-  ctx.fillStyle = ringGrad;
-  ctx.shadowColor = 'rgba(245, 200, 66, 0.6)';
-  ctx.shadowBlur = 20;
-  ctx.fill();
-  ctx.restore();
-
-  // ตัดรูป Avatar เป็นวงกลม
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
-  ctx.closePath();
+  drawHexagon(ctx, avatarX, avatarY, avatarRadius);
   ctx.clip();
 
   if (avatarImg) {
     ctx.drawImage(avatarImg, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
   } else {
-    // Fallback เมื่อโหลดรูปโปรไฟล์ไม่ได้
-    ctx.fillStyle = '#222533';
+    // Fallback
+    ctx.fillStyle = '#111728';
     ctx.fillRect(avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
-    ctx.fillStyle = '#d4af37';
-    ctx.font = 'bold 60px Kanit-Bold, sans-serif';
+    ctx.fillStyle = '#00f2fe';
+    ctx.font = 'bold 64px Kanit-Bold, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(username.charAt(0).toUpperCase(), avatarX, avatarY);
   }
   ctx.restore();
 
-  // วาดขอบเส้นสีทองทับขอบในของ Avatar ให้เนียนกริบ
+  // 5.5 ขอบเส้นนีออนชั้นในของหกเหลี่ยมเพื่อความคมชัด
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.lineWidth = 2;
+  drawHexagon(ctx, avatarX, avatarY, avatarRadius);
   ctx.stroke();
   ctx.restore();
 
-  // 6. วาดส่วนข้อความ (Text Area) ทางขวา
+  // 6. ส่วนข้อความและข้อมูล (Text & HUD Data)
   const textStartX = 340;
   const maxTextWidth = width - textStartX - 50;
 
   // 6.1 ข้อความบนสุด: ยินดีต้อนรับสู่ {Guild Name}
   ctx.save();
   ctx.font = '22px Kanit-Regular, sans-serif';
-  ctx.fillStyle = '#e5be59';
-  ctx.shadowColor = 'rgba(229, 190, 89, 0.3)';
-  ctx.shadowBlur = 8;
+  ctx.fillStyle = '#00f2fe';
+  ctx.shadowColor = 'rgba(0, 242, 254, 0.6)';
+  ctx.shadowBlur = 10;
   const subText = truncateText(ctx, `ยินดีต้อนรับสู่ ${guildName}`, maxTextWidth);
-  ctx.fillText(subText, textStartX, 140);
+  ctx.fillText(subText, textStartX, 138);
   ctx.restore();
 
-  // 6.2 หัวข้อหลัก: "ยินดีต้อนรับ"
+  // 6.2 หัวข้อหลัก: "ยินดีต้อนรับ" (Holographic Cyan-to-Purple Gradient)
   ctx.save();
   ctx.font = 'bold 56px Kanit-Bold, sans-serif';
-  const titleGrad = ctx.createLinearGradient(textStartX, 0, textStartX + 300, 0);
+  const titleGrad = ctx.createLinearGradient(textStartX, 0, textStartX + 320, 0);
   titleGrad.addColorStop(0, '#ffffff');
-  titleGrad.addColorStop(0.6, '#fff0a6');
-  titleGrad.addColorStop(1, '#d4af37');
+  titleGrad.addColorStop(0.3, '#d4fcff');
+  titleGrad.addColorStop(0.7, '#00f2fe');
+  titleGrad.addColorStop(1, '#b827fc');
   ctx.fillStyle = titleGrad;
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetX = 3;
-  ctx.shadowOffsetY = 3;
+  ctx.shadowColor = 'rgba(0, 242, 254, 0.7)';
+  ctx.shadowBlur = 18;
   ctx.fillText('ยินดีต้อนรับ', textStartX, 210);
   ctx.restore();
 
-  // 6.3 ชื่อสมาชิก (Username)
+  // 6.3 เส้นแบ่งนีออนไฮเทค (Tech Neon Accent Divider)
   ctx.save();
-  ctx.font = 'bold 36px Kanit-Bold, sans-serif';
-  ctx.fillStyle = '#f0f3f8';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-  ctx.shadowBlur = 8;
-  const safeUsername = truncateText(ctx, username, maxTextWidth);
-  ctx.fillText(safeUsername, textStartX, 268);
+  const lineGrad = ctx.createLinearGradient(textStartX, 0, textStartX + 420, 0);
+  lineGrad.addColorStop(0, '#00f2fe');
+  lineGrad.addColorStop(0.6, '#b827fc');
+  lineGrad.addColorStop(1, 'rgba(184, 39, 252, 0)');
+  ctx.fillStyle = lineGrad;
+  ctx.fillRect(textStartX, 226, 380, 2.5);
   ctx.restore();
 
-  // 6.4 ป้าย Badge ลำดับสมาชิก: "สมาชิกลำดับที่ #X"
+  // 6.4 ชื่อสมาชิก (Username)
+  ctx.save();
+  ctx.font = 'bold 36px Kanit-Bold, sans-serif';
+  ctx.fillStyle = '#f8fbff';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx.shadowBlur = 10;
+  const safeUsername = truncateText(ctx, username, maxTextWidth);
+  ctx.fillText(safeUsername, textStartX, 280);
+  ctx.restore();
+
+  // 6.5 ป้าย Badge ลำดับสมาชิกสไตล์ชิปไซไฟ (Cyber HUD Capsule Badge)
   ctx.save();
   const badgeText = `สมาชิกลำดับที่ #${memberCount.toLocaleString()}`;
   ctx.font = 'bold 20px Kanit-Bold, sans-serif';
   const textW = ctx.measureText(badgeText).width;
-  const badgeWidth = textW + 56;
-  const badgeHeight = 44;
+  const badgeWidth = textW + 54;
+  const badgeHeight = 42;
   const badgeX = textStartX;
-  const badgeY = 305;
+  const badgeY = 312;
 
-  // กล่องพื้นหลัง Badge
-  roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 22);
+  // กล่องพื้นหลัง Badge (Dark Cyber Glass)
+  roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 10);
   const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeWidth, badgeY + badgeHeight);
-  badgeGrad.addColorStop(0, 'rgba(212, 175, 55, 0.25)');
-  badgeGrad.addColorStop(1, 'rgba(35, 38, 50, 0.7)');
+  badgeGrad.addColorStop(0, 'rgba(0, 242, 254, 0.15)');
+  badgeGrad.addColorStop(1, 'rgba(184, 39, 252, 0.18)');
   ctx.fillStyle = badgeGrad;
   ctx.fill();
 
-  // ขอบ Badge
-  roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 22);
-  ctx.strokeStyle = 'rgba(245, 200, 66, 0.6)';
+  // ขอบ Badge นีออน
+  roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 10);
+  ctx.strokeStyle = 'rgba(0, 242, 254, 0.7)';
   ctx.lineWidth = 1.5;
+  ctx.shadowColor = 'rgba(0, 242, 254, 0.5)';
+  ctx.shadowBlur = 8;
   ctx.stroke();
 
-  // ไอคอนประกายทอง (Diamond Sparkle)
-  const iconX = badgeX + 22;
+  // ไอคอนประดับเพชรไซเบอร์ (Cyber Diamond Sparkle)
+  const iconX = badgeX + 20;
   const iconY = badgeY + (badgeHeight / 2);
-  ctx.fillStyle = '#ffdf6d';
+  ctx.fillStyle = '#00f2fe';
   ctx.beginPath();
-  ctx.moveTo(iconX, iconY - 7);
-  ctx.lineTo(iconX + 6, iconY);
-  ctx.lineTo(iconX, iconY + 7);
-  ctx.lineTo(iconX - 6, iconY);
+  ctx.moveTo(iconX, iconY - 6);
+  ctx.lineTo(iconX + 5, iconY);
+  ctx.lineTo(iconX, iconY + 6);
+  ctx.lineTo(iconX - 5, iconY);
   ctx.closePath();
   ctx.fill();
 
   // ข้อความใน Badge
-  ctx.fillStyle = '#ffea9f';
+  ctx.fillStyle = '#dcfbfe';
   ctx.textBaseline = 'middle';
-  ctx.fillText(badgeText, badgeX + 36, iconY);
+  ctx.fillText(badgeText, badgeX + 34, iconY);
   ctx.restore();
 
   return canvas.toBuffer('image/png');
