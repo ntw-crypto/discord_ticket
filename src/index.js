@@ -11,7 +11,13 @@ const { handleInteraction } = require('./handlers/ticketHandler');
 const { deployCommands } = require('./deploy-commands');
 const { getStockConfig, updateStockDashboard } = require('./services/stockService');
 const { addKeysToPool } = require('./services/trialService');
-const { handleMemberJoin, handleMemberLeave } = require('./services/welcomeService');
+const { 
+  handleMemberJoin, 
+  handleMemberLeave, 
+  initInviteTracker, 
+  updateInviteCache, 
+  deleteInviteCache 
+} = require('./services/welcomeService');
 const { getSheetsConfig, fetchSheetsStock } = require('./services/sheetsService');
 
 const client = new Client({
@@ -19,7 +25,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites
   ],
   partials: [Partials.Channel, Partials.Message],
   rest: {
@@ -96,6 +103,13 @@ client.once('ready', async () => {
     } catch (e) {
       console.warn('⚠️ ไม่สามารถลงทะเบียนคำสั่งอัตโนมัติได้:', e.message);
     }
+  }
+
+  // เริ่มต้นโหลดและแคชข้อมูลลิงก์เชิญ (Invite Tracker)
+  try {
+    await initInviteTracker(client);
+  } catch (e) {
+    console.warn('⚠️ ไม่สามารถโหลด Invite Tracker ได้:', e.message);
   }
 });
 
@@ -240,6 +254,20 @@ client.on('guildMemberRemove', async (member) => {
   } catch (error) {
     console.error('Error in guildMemberRemove handler:', error);
   }
+});
+
+// Event เมื่อมีการสร้างลิงก์เชิญใหม่ (Invite Tracker Sync)
+client.on('inviteCreate', (invite) => {
+  try {
+    updateInviteCache(invite);
+  } catch (e) {}
+});
+
+// Event เมื่อลิงก์เชิญถูกลบหรือหมดอายุ (Invite Tracker Sync)
+client.on('inviteDelete', (invite) => {
+  try {
+    deleteInviteCache(invite);
+  } catch (e) {}
 });
 
 // ตรวจสอบการเปลี่ยนแปลงของคีย์ใน Google Sheets เป็นระยะ เพื่ออัปเดตแดชบอร์ดอัตโนมัติ
