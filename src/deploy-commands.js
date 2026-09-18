@@ -67,28 +67,6 @@ const commands = [
     .setDescription('ส่งการ์ดปุ่มกดรับ Key ทดลองใช้ฟรีเข้าห้องนี้ (เฉพาะแอดมิน)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   new SlashCommandBuilder()
-    .setName('add-trial-keys')
-    .setDescription('เติม Key ทดลองใช้เข้าสู่คลังแจกฟรี (เฉพาะแอดมิน)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addStringOption(option =>
-      option.setName('keys')
-        .setDescription('ใส่ Key ที่ต้องการเติม (คั่นด้วยจุลภาคหรือเว้นวรรค เช่น KEY1, KEY2)')
-        .setRequired(true)
-    ),
-  new SlashCommandBuilder()
-    .setName('import-keys')
-    .setDescription('อัปโหลดไฟล์ .txt เพื่อนำเข้า License Key จำนวนมากเข้าคลัง (เฉพาะแอดมิน)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addAttachmentOption(option =>
-      option.setName('file')
-        .setDescription('แนบไฟล์ .txt ที่มี Key (1 บรรทัดต่อ 1 คีย์)')
-        .setRequired(true)
-    ),
-  new SlashCommandBuilder()
-    .setName('check-keys')
-    .setDescription('📊 ตรวจสอบจำนวน Key คงเหลือในคลังและประวัติการแจก (เฉพาะแอดมิน)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-  new SlashCommandBuilder()
     .setName('broadcast')
     .setDescription('📢 ส่งข้อความประกาศหาลูกค้า/สมาชิกทุกคนทาง DM (เฉพาะแอดมิน)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
@@ -107,19 +85,6 @@ const commands = [
         .setDescription('ส่งเฉพาะคนที่มียศนี้ (หากไม่ระบุจะส่งหาสมาชิกทุกคนในเซิร์ฟเวอร์)')
         .setRequired(false)
     ),
-  new SlashCommandBuilder()
-    .setName('clear-keys')
-    .setDescription('🗑️ ลบ Key ในคลัง (ลบทั้งหมด หรือ ลบเฉพาะคีย์ที่ระบุ) (เฉพาะแอดมิน)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addStringOption(option =>
-      option.setName('specific-key')
-        .setDescription('ระบุ Key ที่ต้องการลบ (หากไม่ใส่ จะเป็นการล้างคลังทั้งหมด)')
-        .setRequired(false)
-    ),
-  new SlashCommandBuilder()
-    .setName('claimed-keys')
-    .setDescription('📜 ดูรายชื่อสมาชิกที่เคยกดรับ Key ไปแล้ว พร้อม Key ที่ได้รับและเวลา (เฉพาะแอดมิน)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   new SlashCommandBuilder()
     .setName('setup-stock')
     .setDescription('📦 ส่งการ์ดแดชบอร์ดสรุปคลัง Key ในห้องนี้ และตั้งเป็นห้องเติม Key อัตโนมัติ (เฉพาะแอดมิน)')
