@@ -1,4 +1,4 @@
-const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 require('dotenv').config();
 
 const commands = [
@@ -123,7 +123,28 @@ const commands = [
   new SlashCommandBuilder()
     .setName('setup-stock')
     .setDescription('📦 ส่งการ์ดแดชบอร์ดสรุปคลัง Key ในห้องนี้ และตั้งเป็นห้องเติม Key อัตโนมัติ (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  new SlashCommandBuilder()
+    .setName('setup-welcome')
+    .setDescription('🎉 ตั้งค่าระบบแจ้งเตือนคนเข้า-ออก และแจกยศเริ่มต้นอัตโนมัติ (เฉพาะแอดมิน)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addChannelOption(option =>
+      option.setName('join-channel')
+        .setDescription('ห้องสำหรับแจ้งเตือนเมื่อมีคนเข้าเซิร์ฟเวอร์')
+        .addChannelTypes(ChannelType.GuildText)
+        .setRequired(true)
+    )
+    .addChannelOption(option =>
+      option.setName('leave-channel')
+        .setDescription('ห้องสำหรับแจ้งเตือนเมื่อมีคนออกจากเซิร์ฟเวอร์')
+        .addChannelTypes(ChannelType.GuildText)
+        .setRequired(true)
+    )
+    .addRoleOption(option =>
+      option.setName('auto-role')
+        .setDescription('ยศเริ่มต้นที่จะแจกให้สมาชิกใหม่อัตโนมัติ (ไม่ระบุก็ได้)')
+        .setRequired(false)
+    )
 ].map(command => command.toJSON());
 
 const restOptions = { version: '10' };

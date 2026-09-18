@@ -26,6 +26,7 @@ const {
   saveStockConfig, 
   updateStockDashboard 
 } = require('../services/stockService');
+const { saveWelcomeConfig } = require('../services/welcomeService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -548,6 +549,40 @@ async function handleInteraction(interaction) {
           `> 📌 **ห้องสต็อก**: <#${interaction.channel.id}>\n` +
           `> 📥 **การเติม Key**: แอดมินสามารถพิมพ์ Key ลงในห้องนี้ หรือแนบไฟล์ \`.txt\` ได้เลย บอทจะดึงเข้าคลังและอัปเดตการ์ดนี้ทันที\n` +
           `> 🔄 **การตัดยอดอัตโนมัติ**: เมื่อมีคนกดรับ Key การ์ดด้านบนจะตัดคีย์ออกและบันทึกประวัติแบบ Real-time ทันที`
+      });
+    }
+
+    // คำสั่ง /setup-welcome ตั้งค่าห้องแจ้งเตือนคนเข้าคนออกและแจกยศเริ่มต้น
+    if (commandName === 'setup-welcome') {
+      const member = interaction.member;
+      const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+      if (!isAdmin) {
+        return interaction.reply({
+          content: '❌ เฉพาะผู้ดูแลระบบ (Administrator) เท่านั้นที่สามารถใช้คำสั่งนี้ได้ครับ',
+          ephemeral: true
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const joinChannel = interaction.options.getChannel('join-channel');
+      const leaveChannel = interaction.options.getChannel('leave-channel');
+      const autoRole = interaction.options.getRole('auto-role');
+
+      saveWelcomeConfig(interaction.guild.id, {
+        joinChannelId: joinChannel.id,
+        leaveChannelId: leaveChannel.id,
+        autoRoleId: autoRole ? autoRole.id : null
+      });
+
+      const autoRoleText = autoRole ? `<@&${autoRole.id}>` : '*(ไม่ได้ตั้งค่า)*';
+
+      return interaction.editReply({
+        content: `🎉 **ตั้งค่าระบบแจ้งเตือนคนเข้า-ออก และยศเริ่มต้นเรียบร้อยแล้ว!**\n\n` +
+          `> 📥 **ห้องแจ้งเตือนคนเข้า**: <#${joinChannel.id}>\n` +
+          `> 📤 **ห้องแจ้งเตือนคนออก**: <#${leaveChannel.id}>\n` +
+          `> 👑 **ยศเริ่มต้น (Auto-Role)**: ${autoRoleText}\n\n` +
+          `💡 *หมายเหตุ: หากมีการตั้งค่ายศเริ่มต้น กรุณาตรวจสอบให้แน่ใจว่ายศของบอทอยู่ในลำดับที่สูงกว่ายศที่ต้องการแจกใน Server Settings เพื่อให้บอทมีสิทธิ์มอบยศได้ครับ*`
       });
     }
   }

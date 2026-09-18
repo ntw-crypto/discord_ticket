@@ -11,6 +11,7 @@ const { handleInteraction } = require('./handlers/ticketHandler');
 const { deployCommands } = require('./deploy-commands');
 const { getStockConfig, updateStockDashboard } = require('./services/stockService');
 const { addKeysToPool } = require('./services/trialService');
+const { handleMemberJoin, handleMemberLeave } = require('./services/welcomeService');
 
 const client = new Client({
   intents: [
@@ -219,6 +220,24 @@ client.on('messageCreate', async (message) => {
         }
       }
     }
+  }
+});
+
+// Event เมื่อมีสมาชิกใหม่เข้าเซิร์ฟเวอร์ (แจ้งเตือนคนเข้า + แจกยศเริ่มต้น)
+client.on('guildMemberAdd', async (member) => {
+  try {
+    await handleMemberJoin(member);
+  } catch (error) {
+    console.error('Error in guildMemberAdd handler:', error);
+  }
+});
+
+// Event เมื่อมีสมาชิกออกจากเซิร์ฟเวอร์ (แจ้งเตือนคนออก)
+client.on('guildMemberRemove', async (member) => {
+  try {
+    await handleMemberLeave(member);
+  } catch (error) {
+    console.error('Error in guildMemberRemove handler:', error);
   }
 });
 
