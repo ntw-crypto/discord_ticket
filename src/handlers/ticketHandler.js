@@ -982,19 +982,29 @@ async function handleTrialClaim(interaction) {
 
   // กรณีเคยรับไปแล้ว
   if (result.alreadyClaimed) {
-    const claimedDate = result.claimedAt 
-      ? new Date(result.claimedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
-      : 'ในระบบก่อนหน้านี้';
+    let claimedDate = 'ในระบบก่อนหน้านี้';
+    if (result.claimedAt) {
+      const parsedDate = new Date(result.claimedAt);
+      if (!isNaN(parsedDate.getTime())) {
+        claimedDate = parsedDate.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+      } else {
+        claimedDate = String(result.claimedAt);
+      }
+    }
+
+    const keyText = result.key ? `\`\`\`fix\n${result.key}\n\`\`\`` : '*(ไม่พบคีย์ในประวัติ)*';
+
     const alreadyEmbed = new EmbedBuilder()
       .setTitle('⚠️ คุณเคยใช้สิทธิ์ทดลองใช้ฟรีไปแล้ว')
       .setDescription(
-        `ระบบจำกัดสิทธิ์ **1 บัญชี Discord ต่อ 1 ครั้ง** เท่านั้นครับ\n\n` +
-        `> 🔑 **Key ที่คุณเคยได้รับ**: \`${result.key}\`\n` +
+        `ระบบตรวจสอบพบว่าคุณเคยได้รับสิทธิ์ทดลองใช้ฟรีไปแล้วครับ *(จำกัดสิทธิ์ 1 บัญชีต่อ 1 ครั้ง)*\n\n` +
+        `🔑 **Key ที่คุณเคยได้รับ:**\n` +
+        `${keyText}\n` +
         `> ⏰ **วันที่กดรับสิทธิ์**: ${claimedDate}\n\n` +
-        `💡 *หากต้องการใช้งานต่ออย่างต่อเนื่อง สามารถเปิด Ticket เพื่อสั่งซื้อแพ็กเกจเต็มได้เลยครับ!*`
+        `💡 *คุณสามารถนำ Key ด้านบนไปเข้าใช้งานในโปรแกรม CookieRunX ได้เลย หรือหากต้องการต่ออายุ สามารถเปิด Ticket เพื่อสั่งซื้อแพ็กเกจได้ครับ!*`
       )
       .setColor('#E74C3C')
-      .setFooter({ text: 'CookieRunX Anti-Abuse Protection' });
+      .setFooter({ text: 'CookieRunX Anti-Abuse Protection • Google Sheets Verified' });
 
     return interaction.editReply({
       embeds: [alreadyEmbed]

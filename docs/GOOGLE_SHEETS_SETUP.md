@@ -37,7 +37,7 @@ function getSheet() {
 // ตรวจสอบสถานะและยอดคีย์คงเหลือ (GET)
 function doGet(e) {
   const sheet = getSheet();
-  const data = sheet.getDataRange().getValues();
+  const data = sheet.getDataRange().getDisplayValues();
   
   let total = 0;
   let available = 0;
@@ -79,10 +79,11 @@ function doPost(e) {
 
   try {
     const sheet = getSheet();
-    const data = sheet.getDataRange().getValues();
+    // ใช้ getDisplayValues เพื่อให้อ่านตัวเลข User ID เป็นข้อความแท้ 100% ไม่เพี้ยนเป็นตัวเลขชี้กำลัง (Scientific Notation)
+    const displayData = sheet.getDataRange().getDisplayValues();
     const params = JSON.parse(e.postData.contents || '{}');
     const action = params.action || 'claim';
-    const userId = String(params.userId || '').trim();
+    const cleanUserId = String(params.userId || '').replace(/['\s\t]/g, '').trim();
     const username = String(params.username || '').trim();
 
     if (action === 'check') {
@@ -90,19 +91,23 @@ function doPost(e) {
     }
 
     if (action === 'claim') {
-      if (!userId) {
+      if (!cleanUserId) {
         return createJsonResponse({ success: false, error: 'User ID is required' });
       }
 
-      // 1. ตรวจสอบว่า User ID นี้เคยกดรับสิทธิ์ไปแล้วหรือไม่
-      for (let i = 1; i < data.length; i++) {
-        const rowUserId = String(data[i][3] || '').trim();
-        if (rowUserId === userId) {
+      // 1. ตรวจสอบ User ID ของคนกดรับกับ Google Sheets
+      for (let i = 1; i < displayData.length; i++) {
+        const rowUserId = String(displayData[i][3] || '').replace(/['\s\t]/g, '').trim();
+        const rowUsername = String(displayData[i][2] || '').trim();
+        const rowKey = String(displayData[i][0] || '').trim();
+
+        // ตรวจสอบว่าตรงกับ User ID ในคอลัมน์ D หรือคอลัมน์ C
+        if ((rowUserId && rowUserId === cleanUserId) || (rowUsername && rowUsername === cleanUserId)) {
           return createJsonResponse({
             success: false,
             alreadyClaimed: true,
-            key: data[i][0],
-            claimedAt: data[i][4]
+            key: rowKey,
+            claimedAt: displayData[i][4] || 'ก่อนหน้านี้'
           });
         }
       }
@@ -111,9 +116,9 @@ function doPost(e) {
       let targetRow = -1;
       let assignedKey = '';
 
-      for (let i = 1; i < data.length; i++) {
-        const key = String(data[i][0] || '').trim();
-        const status = String(data[i][1] || '').trim().toLowerCase();
+      for (let i = 1; i < displayData.length; i++) {
+        const key = String(displayData[i][0] || '').trim();
+        const status = String(displayData[i][1] || '').trim().toLowerCase();
 
         if (key && status !== 'claimed' && status !== 'ใช้แล้ว' && status !== 'รับแล้ว') {
           targetRow = i + 1; // แปลง index เป็น row number (1-based)
@@ -137,15 +142,16 @@ function doPost(e) {
 
       sheet.getRange(targetRow, 2).setValue('Claimed'); // Column B: Status
       sheet.getRange(targetRow, 3).setValue(username); // Column C: Claimed By
-      sheet.getRange(targetRow, 4).setValue("'" + userId); // Column D: User ID
+      sheet.getRange(targetRow, 4).setNumberFormat('@'); // ตั้งค่าเซลล์เป็น Plain Text ป้องกันตัวเลขเพี้ยน
+      sheet.getRange(targetRow, 4).setValue(cleanUserId); // Column D: User ID
       sheet.getRange(targetRow, 5).setValue(timeString); // Column E: Claimed Date
 
       // คำนวณยอดคงเหลือ
       let remaining = 0;
-      for (let i = 1; i < data.length; i++) {
+      for (let i = 1; i < displayData.length; i++) {
         if (i + 1 !== targetRow) {
-          const k = String(data[i][0] || '').trim();
-          const s = String(data[i][1] || '').trim().toLowerCase();
+          const k = String(displayData[i][0] || '').trim();
+          const s = String(displayData[i][1] || '').trim().toLowerCase();
           if (k && s !== 'claimed' && s !== 'ใช้แล้ว' && s !== 'รับแล้ว') {
             remaining++;
           }
