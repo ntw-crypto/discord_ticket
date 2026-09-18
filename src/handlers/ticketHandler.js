@@ -27,7 +27,7 @@ const {
   updateStockDashboard 
 } = require('../services/stockService');
 const { saveWelcomeConfig } = require('../services/welcomeService');
-const { saveSheetsConfig, testSheetsConnection } = require('../services/sheetsService');
+const { getSheetsConfig, fetchSheetsStock, saveSheetsConfig, testSheetsConnection } = require('../services/sheetsService');
 
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
@@ -286,29 +286,43 @@ async function handleInteraction(interaction) {
 
     // คำสั่ง /check-keys ตรวจสอบยอด Key คงเหลือและสถิติ พร้อมแสดงรายชื่อ Key
     if (commandName === 'check-keys') {
-      const pool = getTrialKeysPool();
-      const claimed = getClaimedUsers();
-      const claimedCount = Object.keys(claimed).length;
+      await interaction.deferReply({ ephemeral: true });
+
+      const sheetsConfig = getSheetsConfig();
+      let pool = getTrialKeysPool();
+      let claimedCount = Object.keys(getClaimedUsers()).length;
+      let isSheets = false;
+      let totalCount = pool.length;
+
+      if (sheetsConfig && sheetsConfig.webAppUrl) {
+        const sheetData = await fetchSheetsStock();
+        if (sheetData && sheetData.success) {
+          isSheets = true;
+          totalCount = sheetData.available ?? 0;
+          claimedCount = sheetData.claimed ?? claimedCount;
+          pool = sheetData.availableKeys || [];
+        }
+      }
 
       // จัดรูปแบบแสดงรายการ Key
       let keyListText = 'คลังว่างเปล่า (ไม่มี Key ในระบบ)';
       if (pool.length > 0) {
         if (pool.length <= 20) {
-          // ถ้ามีไม่เกิน 20 คีย์ ให้แสดงทั้งหมดใน Embed
           keyListText = pool.map((k, i) => `${i + 1}. \`${k}\``).join('\n');
         } else {
-          // ถ้าเกิน 20 คีย์ ให้แสดง 20 คีย์แรก แล้วแจ้งยอดที่เหลือ
-          keyListText = pool.slice(0, 20).map((k, i) => `${i + 1}. \`${k}\``).join('\n') + `\n*...และอีก ${pool.length - 20} คีย์ (ดูในไฟล์แนบ)*`;
+          keyListText = pool.slice(0, 20).map((k, i) => `${i + 1}. \`${k}\``).join('\n') + `\n*...และอีก ${totalCount - 20} คีย์*`;
         }
       }
 
+      const sourceText = isSheets ? '🟢 ข้อมูลดึงสดจาก Google Sheets' : '📁 ข้อมูลจากคลังในระบบบอท';
+
       const statsEmbed = new EmbedBuilder()
         .setTitle('📊 รายงานสถานะคลัง License Key (CookieRunX)')
-        .setDescription('ข้อมูลสถิติและรายชื่อ License Key ทดลองใช้ฟรี 7 วันในระบบ')
+        .setDescription(`${sourceText}\nข้อมูลสถิติและรายชื่อ License Key ทดลองใช้ฟรี 7 วันในระบบ`)
         .addFields(
           {
             name: '📦 Key คงเหลือในคลัง',
-            value: `\`\`\`fix\n${pool.length} คีย์\n\`\`\``,
+            value: `\`\`\`fix\n${totalCount} คีย์\n\`\`\``,
             inline: true
           },
           {
@@ -327,12 +341,10 @@ async function handleInteraction(interaction) {
         .setTimestamp();
 
       const replyOptions = {
-        embeds: [statsEmbed],
-        ephemeral: true
+        embeds: [statsEmbed]
       };
 
-      // ถ้ามีคีย์เกิน 20 คีย์ ให้แนบไฟล์ .txt สรุปคีย์ทั้งหมดให้อัตโนมัติ
-      if (pool.length > 20) {
+      if (!isSheets && pool.length > 20) {
         const fileContent = pool.join('\n');
         replyOptions.files = [{
           attachment: Buffer.from(fileContent, 'utf-8'),
@@ -340,7 +352,7 @@ async function handleInteraction(interaction) {
         }];
       }
 
-      return interaction.reply(replyOptions);
+      return interaction.editReply(replyOptions);
     }
 
     // คำสั่ง /broadcast สำหรับแอดมินส่งประกาศหาทุกคนทาง DM

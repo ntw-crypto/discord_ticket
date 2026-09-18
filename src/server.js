@@ -36,6 +36,17 @@ function startWebServer(client) {
     };
   };
 
+  // Webhook รับสัญญาณสั่งรีเฟรชแดชบอร์ดสต็อกทันที (เช่น เมื่อมีการแก้ไขใน Google Sheets)
+  app.all('/api/sync-stock', async (req, res) => {
+    try {
+      const { updateStockDashboard } = require('./services/stockService');
+      const updated = await updateStockDashboard(client);
+      res.json({ success: true, updated, message: 'Stock dashboard synced successfully' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Route / แสดงภาพรวมสถานะบอท และข้อมูลวินิจฉัย
   app.get('/', (req, res) => {
     const health = getBotHealth();

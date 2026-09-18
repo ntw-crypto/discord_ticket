@@ -12,6 +12,7 @@ const { deployCommands } = require('./deploy-commands');
 const { getStockConfig, updateStockDashboard } = require('./services/stockService');
 const { addKeysToPool } = require('./services/trialService');
 const { handleMemberJoin, handleMemberLeave } = require('./services/welcomeService');
+const { getSheetsConfig, fetchSheetsStock } = require('./services/sheetsService');
 
 const client = new Client({
   intents: [
@@ -240,6 +241,30 @@ client.on('guildMemberRemove', async (member) => {
     console.error('Error in guildMemberRemove handler:', error);
   }
 });
+
+// ตรวจสอบการเปลี่ยนแปลงของคีย์ใน Google Sheets เป็นระยะ เพื่ออัปเดตแดชบอร์ดอัตโนมัติ
+let lastKnownSheetsSignature = null;
+setInterval(async () => {
+  try {
+    const isReady = Boolean(client && client.isReady && client.isReady());
+    if (!isReady) return;
+
+    const sheetsConfig = getSheetsConfig();
+    if (!sheetsConfig || !sheetsConfig.webAppUrl) return;
+
+    const stock = await fetchSheetsStock();
+    if (stock && stock.success) {
+      const signature = `${stock.available}_${stock.claimed}_${(stock.availableKeys || []).join(',')}`;
+      if (lastKnownSheetsSignature !== null && lastKnownSheetsSignature !== signature) {
+        console.log('[GoogleSheets Auto-Sync] ตรวจพบข้อมูลในชีตเปลี่ยนแปลง สั่งอัปเดตแดชบอร์ด...');
+        await updateStockDashboard(client);
+      }
+      lastKnownSheetsSignature = signature;
+    }
+  } catch (err) {
+    // ละเว้น error เพื่อไม่ให้กระทบ loop
+  }
+}, 30000); // ตรวจสอบทุก 30 วินาที
 
 // Gateway Watchdog ป้องกัน Zombie Connection (ทำงานเฉพาะเมื่อบอทเคยต่อติดสำเร็จแล้วเท่านั้น)
 let staleGatewayCount = 0;
