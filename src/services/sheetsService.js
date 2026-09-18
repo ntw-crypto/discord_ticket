@@ -9,7 +9,13 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzS3Ujh8yy1kXKalkDnXN6HapYvQrTdPWefrFns74ygLNrcdCiHtzGVVpoI8s7-qb2Y/exec';
+
 function getSheetsConfig() {
+  if (process.env.GOOGLE_SHEETS_URL) {
+    return { webAppUrl: process.env.GOOGLE_SHEETS_URL };
+  }
+
   try {
     if (fs.existsSync(sheetsConfigPath)) {
       const data = JSON.parse(fs.readFileSync(sheetsConfigPath, 'utf-8'));
@@ -17,10 +23,8 @@ function getSheetsConfig() {
     }
   } catch (e) {}
 
-  if (process.env.GOOGLE_SHEETS_URL) {
-    return { webAppUrl: process.env.GOOGLE_SHEETS_URL };
-  }
-  return null;
+  // ค่าเริ่มต้นอัตโนมัติ ไม่ต้องคอยพิมพ์ /setup-sheets ทุกครั้งที่บอทรีสตาร์ทหรือ Deploy ใหม่
+  return { webAppUrl: DEFAULT_SHEETS_URL };
 }
 
 function saveSheetsConfig(config) {
