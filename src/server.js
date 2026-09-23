@@ -2,7 +2,7 @@ const express = require('express');
 
 function startWebServer(client) {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
   // Helper ตรวจสอบความสมบูรณ์ของการเชื่อมต่อ Discord Gateway
   const getBotHealth = () => {
@@ -112,8 +112,12 @@ function startWebServer(client) {
     }
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Web Server] HTTP server is running on 0.0.0.0:${PORT}`);
+  });
+
+  server.on('error', (err) => {
+    console.warn(`[Web Server] ⚠️ ไม่สามารถเปิด Web Server บนพอร์ต ${PORT} ได้: ${err.message} (บอท Discord ยังคงทำงานได้ตามปกติ)`);
   });
 }
 
