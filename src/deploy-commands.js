@@ -72,6 +72,13 @@ const commands = [
         .setRequired(false)
     ),
   new SlashCommandBuilder()
+    .setName('download')
+    .setDescription('📥 ดาวน์โหลดโปรแกรมบอท CookieRunX เวอร์ชันล่าสุด พร้อมปุ่มกด'),
+  new SlashCommandBuilder()
+    .setName('setup-download')
+    .setDescription('ส่งการ์ดปุ่มกดดาวน์โหลดโปรแกรม CookieRunX เข้าห้องนี้ (เฉพาะแอดมิน)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  new SlashCommandBuilder()
     .setName('broadcast')
     .setDescription('📢 ส่งข้อความประกาศหาลูกค้า/สมาชิกทุกคนทาง DM (เฉพาะแอดมิน)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)

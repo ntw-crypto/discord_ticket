@@ -22,6 +22,44 @@ const {
 const { saveWelcomeConfig } = require('../services/welcomeService');
 const { getSheetsConfig, fetchSheetsStock, saveSheetsConfig, testSheetsConnection } = require('../services/sheetsService');
 
+const COOKIERUN_DOWNLOAD_URL = process.env.DOWNLOAD_URL || 'https://ampz.in.th/CookieRunX.exe';
+
+function buildDownloadPayload() {
+  const downloadEmbed = new EmbedBuilder()
+    .setTitle('📥 ดาวน์โหลดโปรแกรมบอทช่วยเล่น CookieRunX')
+    .setDescription(
+      `ปลดล็อกการฟาร์มอัตโนมัติ ปล่อยเล่นให้ 24 ชม. เสถียร แม่นยำ ปลอดภัย!\n\n` +
+      `> 🚀 **ไฟล์โปรแกรม**: \`CookieRunX.exe\`\n` +
+      `> ⚡ **สถานะ**: พร้อมใช้งาน (Undetected & Auto-Update)\n` +
+      `> 🖥️ **ระบบปฏิบัติการ**: Windows 10 / 11 (64-bit)\n` +
+      `> 📱 **โปรแกรมจำลองที่แนะนำ**: LDPlayer 9\n` +
+      `> ⚙️ **การตั้งค่าหน้าจอ Emulator**: 1280x720 (240 DPI)\n\n` +
+      `📌 **ขั้นตอนการเริ่มใช้งาน:**\n` +
+      `1. กดปุ่ม **"📥 ดาวน์โหลด CookieRunX.exe"** ด้านล่าง\n` +
+      `2. เปิดโปรแกรม (คลิกขวาเลือก *Run as administrator*)\n` +
+      `3. นำ **License Key** มากด Login (กดรับ Key ฟรีได้ที่ปุ่มด้านล่าง)\n` +
+      `4. ตั้งค่าหน้าจอ Emulator ให้ตรง แล้วกดเริ่มฟาร์มได้ทันที!`
+    )
+    .setColor('#D4AF37')
+    .setFooter({ text: 'CookieRunX Official Software • ปลอดภัย ไร้ไวรัส 100%' })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel('ดาวน์โหลด CookieRunX.exe')
+      .setEmoji('📥')
+      .setStyle(ButtonStyle.Link)
+      .setURL(COOKIERUN_DOWNLOAD_URL),
+    new ButtonBuilder()
+      .setCustomId('btn_claim_trial')
+      .setLabel('ขอรับ Key ทดลองใช้ฟรี 7 วัน')
+      .setEmoji('🎁')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  return { embeds: [downloadEmbed], components: [row] };
+}
+
 async function handleInteraction(interaction) {
   // 1. คำสั่ง Slash Commands
   if (interaction.isChatInputCommand()) {
@@ -230,6 +268,25 @@ async function handleInteraction(interaction) {
     // คำสั่ง /trial สำหรับกดรับทางคำสั่ง
     if (commandName === 'trial') {
       return handleTrialClaim(interaction);
+    }
+
+    // คำสั่ง /download สำหรับสมาชิกกดดูลิงก์ดาวน์โหลด
+    if (commandName === 'download') {
+      const payload = buildDownloadPayload();
+      return interaction.reply({
+        ...payload,
+        ephemeral: true
+      });
+    }
+
+    // คำสั่ง /setup-download สำหรับแอดมินส่งการ์ดปุ่มดาวน์โหลดเข้าห้อง
+    if (commandName === 'setup-download') {
+      await interaction.deferReply({ ephemeral: true });
+      const payload = buildDownloadPayload();
+      await interaction.channel.send(payload);
+      return interaction.editReply({
+        content: '✅ ส่งการ์ดดาวน์โหลดโปรแกรม CookieRunX เข้าสู่ห้องนี้เรียบร้อยแล้ว!'
+      });
     }
 
     // คำสั่ง /broadcast สำหรับแอดมินส่งประกาศหาทุกคนทาง DM
@@ -820,8 +877,17 @@ async function handleTrialClaim(interaction, specificRoleId = null) {
       .setColor('#E74C3C')
       .setFooter({ text: 'CookieRunX Anti-Abuse Protection • Google Sheets Verified' });
 
+    const downloadRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('ดาวน์โหลด CookieRunX.exe')
+        .setEmoji('📥')
+        .setStyle(ButtonStyle.Link)
+        .setURL(COOKIERUN_DOWNLOAD_URL)
+    );
+
     return interaction.editReply({
-      embeds: [alreadyEmbed]
+      embeds: [alreadyEmbed],
+      components: [downloadRow]
     });
   }
 
@@ -878,8 +944,17 @@ async function handleTrialClaim(interaction, specificRoleId = null) {
 
   updateStockDashboard(interaction.client).catch(() => {});
 
+  const downloadRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel('ดาวน์โหลด CookieRunX.exe')
+      .setEmoji('📥')
+      .setStyle(ButtonStyle.Link)
+      .setURL(COOKIERUN_DOWNLOAD_URL)
+  );
+
   return interaction.editReply({
-    embeds: [successEmbed]
+    embeds: [successEmbed],
+    components: [downloadRow]
   });
 }
 
