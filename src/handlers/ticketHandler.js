@@ -52,7 +52,7 @@ function buildDownloadPayload() {
       .setURL(COOKIERUN_DOWNLOAD_URL),
     new ButtonBuilder()
       .setCustomId('btn_claim_trial')
-      .setLabel('ขอรับ Key ทดลองใช้ฟรี 7 วัน')
+      .setLabel('รับ Key ทดลองใช้ฟรี 1 วัน')
       .setEmoji('🎁')
       .setStyle(ButtonStyle.Success)
   );
@@ -183,8 +183,10 @@ async function handleInteraction(interaction) {
 
       const title = interaction.options.getString('title') || '👑 ยืนยันตัวตนเพื่อรับยศ / Get Verified Role';
       const description = interaction.options.getString('description') || 
-        `กดปุ่มด้านล่างเพื่อรับยศ <@&${targetRole.id}>\n> ✨ ปลดล็อกการเข้าถึงห้องต่างๆ ในเซิร์ฟเวอร์\n> 🔔 ได้รับการแจ้งเตือนข่าวสารและอัปเดตบอท CookieRun ก่อนใคร`;
+        `กดปุ่มด้านล่างเพื่อรับยศ <@&${targetRole.id}>\n> ✨ ปลดล็อกการเข้าถึงห้องต่างๆ ในเซิร์ฟเวอร์\n> 🎁 รับสิทธิ์ License Key ทดลองใช้งานบอทฟรี 1 วัน\n> 🔔 ได้รับการแจ้งเตือนข่าวสารและอัปเดตบอท CookieRun ก่อนใคร`;
       const buttonLabel = interaction.options.getString('button-label') || `รับยศ ${targetRole.name}`;
+      const withTrialButton = interaction.options.getBoolean('with-trial-button') ?? true;
+      const requireRole = interaction.options.getBoolean('require-role') ?? false;
 
       const roleEmbed = new EmbedBuilder()
         .setTitle(title)
@@ -193,13 +195,26 @@ async function handleInteraction(interaction) {
         .setFooter({ text: 'CookieRunX Role Assignment' })
         .setTimestamp();
 
-      const row = new ActionRowBuilder().addComponents(
+      const buttons = [
         new ButtonBuilder()
           .setCustomId(`btn_role_${targetRole.id}`)
           .setLabel(buttonLabel)
           .setEmoji('✨')
           .setStyle(ButtonStyle.Success)
-      );
+      ];
+
+      if (withTrialButton) {
+        const trialCustomId = requireRole ? `btn_claim_trial:${targetRole.id}` : 'btn_claim_trial';
+        buttons.push(
+          new ButtonBuilder()
+            .setCustomId(trialCustomId)
+            .setLabel('รับ Key ทดลองใช้ฟรี 1 วัน')
+            .setEmoji('🎁')
+            .setStyle(ButtonStyle.Primary)
+        );
+      }
+
+      const row = new ActionRowBuilder().addComponents(...buttons);
 
       await interaction.channel.send({
         embeds: [roleEmbed],
@@ -228,14 +243,14 @@ async function handleInteraction(interaction) {
       }
 
       const trialEmbed = new EmbedBuilder()
-        .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 7 วัน!')
+        .setTitle('🎁 ขอรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 1 วัน!')
         .setDescription(
           `สัมผัสประสบการณ์ฟาร์มอัตโนมัติ ปล่อยบอทเล่นให้ 24 ชม.\n` +
-          `> ✨ **สิทธิ์การใช้งาน**: ทดลองใช้ฟรี 7 วันเต็ม\n` +
+          `> ✨ **สิทธิ์การใช้งาน**: ทดลองใช้ฟรี 1 วันเต็ม\n` +
           `> ⚡ **เงื่อนไข**: จำกัด 1 สิทธิ์ ต่อ 1 บัญชี Discord เท่านั้น\n` +
           roleConditionText +
           `> 🛡️ **ความปลอดภัย**: ปลอดภัย ไม่โดนแบน (Safe & Undetected)\n\n` +
-          `กดปุ่ม **"🎁 รับ Key ทดลองใช้ฟรี 7 วัน"** ด้านล่างเพื่อรับคีย์ทันที!`
+          `กดปุ่ม **"🎁 รับ Key ทดลองใช้ฟรี 1 วัน"** ด้านล่างเพื่อรับคีย์ทันที!`
         )
         .setColor('#D4AF37')
         .setFooter({ text: 'CookieRunX Auto-Bot Trial System' })
@@ -246,7 +261,7 @@ async function handleInteraction(interaction) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(customId)
-          .setLabel('รับ Key ทดลองใช้ฟรี 7 วัน')
+          .setLabel('รับ Key ทดลองใช้ฟรี 1 วัน')
           .setEmoji('🎁')
           .setStyle(ButtonStyle.Success)
       );
@@ -531,13 +546,32 @@ async function handleInteraction(interaction) {
 
       try {
         if (member.roles.cache.has(roleId)) {
+          const trialRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('btn_claim_trial')
+              .setLabel('รับ Key ทดลองใช้ฟรี 1 วัน')
+              .setEmoji('🎁')
+              .setStyle(ButtonStyle.Success)
+          );
+
           return interaction.editReply({
-            content: `⚠️ คุณมียศ <@&${role.id}> อยู่แล้วครับ (ไม่สามารถถอดยศเองได้ หากต้องการถอดยศกรุณาติดต่อแอดมิน)`
+            content: `⚠️ คุณมียศ <@&${role.id}> อยู่แล้วครับ (ไม่สามารถถอดยศเองได้ หากต้องการถอดยศกรุณาติดต่อแอดมิน)\n💡 *กดปุ่มด้านล่างเพื่อรับ License Key ทดลองใช้ฟรี 1 วันได้เลยครับ!*`,
+            components: [trialRow]
           });
         } else {
           await member.roles.add(role);
+
+          const trialRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('btn_claim_trial')
+              .setLabel('รับ Key ทดลองใช้ฟรี 1 วัน')
+              .setEmoji('🎁')
+              .setStyle(ButtonStyle.Success)
+          );
+
           return interaction.editReply({
-            content: `🎉 **รับยศสำเร็จ!** คุณได้รับยศ <@&${role.id}> เรียบร้อยแล้ว ยินดีต้อนรับครับ ✨`
+            content: `🎉 **รับยศสำเร็จ!** คุณได้รับยศ <@&${role.id}> เรียบร้อยแล้ว ยินดีต้อนรับครับ ✨\n💡 *กดปุ่มด้านล่างเพื่อรับ License Key ทดลองใช้ฟรี 1 วันได้ทันที!*`,
+            components: [trialRow]
           });
         }
       } catch (err) {
@@ -927,7 +961,7 @@ async function handleTrialClaim(interaction, specificRoleId = null) {
 
   // กรณีรับสิทธิ์สำเร็จ
   const successEmbed = new EmbedBuilder()
-    .setTitle('🎉 ยินดีด้วย! คุณได้รับ Key ทดลองใช้ฟรี 7 วัน')
+    .setTitle('🎉 ยินดีด้วย! คุณได้รับ Key ทดลองใช้ฟรี 1 วัน')
     .setDescription(
       `ขอขอบคุณที่สนใจโปรแกรมบอทช่วยฟาร์ม **CookieRunX** ✨\n\n` +
       `🔑 **License Key ของคุณ:**\n` +
@@ -936,7 +970,7 @@ async function handleTrialClaim(interaction, specificRoleId = null) {
       `1. เปิดโปรแกรมบอท **CookieRunX** บนคอมพิวเตอร์ของคุณ\n` +
       `2. นำ Key ด้านบนไปวางในช่อง **License Key** แล้วกด Login\n` +
       `3. ตั้งค่าหน้าจอ Emulator (1280x720 240DPI) แล้วเริ่มฟาร์มได้ทันที!\n\n` +
-      `⚠️ *หมายเหตุ: คีย์นี้เป็นความลับเฉพาะคุณ มีอายุการใช้งาน 7 วันหลังจากเริ่มเปิดใช้งาน*`
+      `⚠️ *หมายเหตุ: คีย์นี้เป็นความลับเฉพาะคุณ มีอายุการใช้งาน 1 วันหลังจากเริ่มเปิดใช้งาน*`
     )
     .setColor('#2ECC71')
     .setFooter({ text: 'CookieRunX Auto-Farm System' })

@@ -58,10 +58,20 @@ const commands = [
       option.setName('button-label')
         .setDescription('ข้อความบนปุ่มกด (เช่น กดรับยศสมาชิก)')
         .setRequired(false)
+    )
+    .addBooleanOption(option =>
+      option.setName('with-trial-button')
+        .setDescription('เพิ่มปุ่มกดรับ Key ทดลองใช้ฟรี 1 วันไว้ข้างๆ หรือไม่ (ค่าเริ่มต้น: มีปุ่ม)')
+        .setRequired(false)
+    )
+    .addBooleanOption(option =>
+      option.setName('require-role')
+        .setDescription('บังคับว่าต้องกดรับยศนี้ก่อน จึงจะกดรับ Key ทดลองใช้ได้หรือไม่ (ค่าเริ่มต้น: ไม่บังคับ)')
+        .setRequired(false)
     ),
   new SlashCommandBuilder()
     .setName('trial')
-    .setDescription('🎁 กดรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 7 วัน (1 บัญชีต่อ 1 สิทธิ์)'),
+    .setDescription('🎁 กดรับ License Key ทดลองใช้งานบอท CookieRun ฟรี 1 วัน (1 บัญชีต่อ 1 สิทธิ์)'),
   new SlashCommandBuilder()
     .setName('setup-trial')
     .setDescription('ส่งการ์ดปุ่มกดรับ Key ทดลองใช้ฟรีเข้าห้องนี้ (เฉพาะแอดมิน)')
